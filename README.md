@@ -6,6 +6,82 @@
 
 ---
 
+# AI畫的專題架構可以參考看看他怎麼再細分出共同功能
+(當然有點太多東西，參考就好)
+```
+medical-order-assistant/
+│
+├── app.py
+├── config.py
+├── requirements.txt
+├── README.md
+│
+├── website/                      # Flask 網站層
+│   ├── routes/
+│   │   ├── main_routes.py
+│   │   ├── medical_routes.py
+│   │   └── diary_routes.py
+│   │
+│   ├── templates/
+│   │   ├── base.html
+│   │   ├── index.html
+│   │   ├── medical.html
+│   │   └── diary.html
+│   │
+│   ├── static/
+│   │   ├── css/
+│   │   ├── js/
+│   │   └── images/
+│   │
+│   └── forms/
+│       ├── medical_form.py
+│       └── diary_form.py
+│
+├── medical/                     # 醫囑 NLP 模組
+│   ├── ner.py
+│   ├── relation.py
+│   ├── summarizer.py
+│   ├── translator.py
+│   ├── wiki_fetcher.py
+│   └── processor.py
+│
+├── diary/                       # 日記分析模組
+│   ├── emotion.py
+│   ├── symptom_detector.py
+│   ├── trend_analysis.py
+│   └── processor.py
+│
+├── shared/                      # 共用功能
+│   ├── pii.py
+│   ├── database.py
+│   ├── utils.py
+│   ├── cache.py
+│   └── constants.py
+│
+├── database/
+│   ├── schema.sql
+│   └── seed_data.sql
+│
+├── models/                      # ORM models（若用 SQLAlchemy）
+│   ├── medical_order.py
+│   ├── diary_entry.py
+│   └── wiki_cache.py
+│
+├── data/
+│   ├── symptom_keywords.txt
+│   ├── sample_orders/
+│   └── sample_diaries/
+│
+├── tests/
+│   ├── test_medical.py
+│   ├── test_diary.py
+│   └── test_pii.py
+│
+└── docs/
+    ├── architecture.md
+    └── api_design.md
+```
+
 # 📖 Project Overview
 
 Medical Order Intelligence Assistant 是一套結合醫療 NLP、情緒分析與隱私保護的智慧醫療輔助系統，目標是協助病患與照護者更容易理解醫囑內容，並透過日記分析觀察症狀與情緒變化趨勢。
