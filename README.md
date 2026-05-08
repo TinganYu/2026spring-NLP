@@ -278,16 +278,6 @@ Visualization & Multi-language Output
 - Wikipedia API
 - NLP Pipeline
 
-## Backend
-
-- Python
-- PostgreSQL
-
-## Frontend
-
-- Chart.js
-- Web UI
-
 ---
 
 # 📦 Future Improvements
