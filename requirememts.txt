@@ -1,0 +1,13 @@
+azure-cognitiveservices-speech
+azure-ai-translation-text
+azure-ai-textanalytics
+nltk
+jieba
+Wikipedia-API
+
+python-dotenv
+ipython
+ipykernel
+wordcloud
+matplotlib
+snownlp
