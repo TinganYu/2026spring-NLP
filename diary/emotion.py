@@ -50,11 +50,11 @@ def detect_emotion(text: str) -> EmotionResult:
     totals = {"positive": 0.0, "neutral": 0.0, "negative": 0.0}
     sentences_out = []
     for s in doc.sentences:
-        lbl = s.sentiment
-        scores = s.confidence_scores
-        sent_score = float(max(scores.positive, scores.neutral, scores.negative))
+        lbl = s.sentiment # positive/neutral/negative
+        scores = s.confidence_scores # confidence scores for each label
+        sent_score = float(max(scores.positive, scores.neutral, scores.negative)) # 用最高的信心分數代表該句的情緒強度(我忘記azure是不是本來就只會輸出最高的)
         sentences_out.append({"text": s.text, "label": lbl, "score": sent_score})
-        totals["positive"] += float(scores.positive)
+        totals["positive"] += float(scores.positive) # 沒有直接丟棄較低的分數。它把每一句的「微量負向」或「微量中立」通通存起來，最後再看整體誰勝出。
         totals["neutral"] += float(scores.neutral)
         totals["negative"] += float(scores.negative)
 

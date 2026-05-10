@@ -57,7 +57,7 @@ def _call_pii_api(text: str, language: Optional[str] = None) -> Dict[str, Any]:
         "Content-Type": "application/json",
     }
     
-    # 直接在此定義 request body，乾淨俐落
+    # 直接在此定義 request body
     body = {
         "kind": "PiiEntityRecognition",
         "parameters": {
@@ -72,7 +72,7 @@ def _call_pii_api(text: str, language: Optional[str] = None) -> Dict[str, Any]:
                 "Organization",
             ],
             "redactionPolicy": {
-                "policyKind": "entityMask",
+                "policyKind": "entityMask", # azure會自動回傳實體類別覆蓋，例如[person1]
             },
         },
         "analysisInput": {
@@ -101,7 +101,7 @@ def _call_pii_api(text: str, language: Optional[str] = None) -> Dict[str, Any]:
 
     docs = result["results"]["documents"]
     if not docs:
-        return {"entities": [], "redacted_text": text}
+        return {"entities": [], "redacted_text": text} # 如果沒有文件結果，直接回傳空實體列表和原始文本（不遮蔽）
 
     doc = docs[0]
     entities = doc.get("entities", [])

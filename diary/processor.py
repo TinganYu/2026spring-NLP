@@ -66,7 +66,7 @@ def _summarize_phi(health_result):
     entities_by_category = {}
     for entity in entities:
         category = entity["category"] or "Unknown"
-        entities_by_category.setdefault(category, []).append(entity)
+        entities_by_category.setdefault(category, []).append(entity) # 按照 category 分類實體，方便後續分析和視覺化
 
     important_entities = [
         entity
@@ -85,7 +85,7 @@ def _summarize_phi(health_result):
         "translated_text": health_result.translated_text,
         "detected_language": health_result.detected_language,
         "target_language": health_result.target_language,
-        "symptom_or_sign": symptom_or_sign,
+        "symptom_or_sign": symptom_or_sign, # 特別把症狀和體徵整理出來，因為這是日記分析中最常關注的資訊之一
         "important_entities": important_entities,
         "entities_by_category": entities_by_category,
         "entities": entities,
@@ -93,7 +93,7 @@ def _summarize_phi(health_result):
     }
 
 
-def _phi_symptoms_to_model(phi_summary):
+def _phi_symptoms_to_model(phi_summary): # 把 PHI 的 SymptomOrSign 實體轉換成我們模型裡的 Symptom 物件列表
     return [
         Symptom(
             name=entity.get("text") or entity.get("normalized_text") or "",
@@ -148,29 +148,29 @@ def process_entry(text: str, meta: dict = None, apply_pii_mask: bool = True) -> 
     )
 
 
-def to_visualization_record(analysis_result: AnalysisResult, date: str = None) -> dict:
-    """Convert AnalysisResult to visualization-friendly format.
+# def to_visualization_record(analysis_result: AnalysisResult, date: str = None) -> dict:
+#     """Convert AnalysisResult to visualization-friendly format.
     
-    This helper function prepares data from process_entry() for use with
-    visualization.py functions like build_emotion_line_chart() and 
-    build_emotion_symptom_cooccurrence().
+#     This helper function prepares data from process_entry() for use with
+#     visualization.py functions like build_emotion_line_chart() and 
+#     build_emotion_symptom_cooccurrence().
     
-    Args:
-        analysis_result: Output from process_entry()
-        date: Date string (YYYY-MM-DD). If None, uses meta['date'] or current date.
+#     Args:
+#         analysis_result: Output from process_entry()
+#         date: Date string (YYYY-MM-DD). If None, uses meta['date'] or current date.
         
-    Returns:
-        Dictionary with keys: date, sentiment_label, sentiment_score, phi, emotion_sentences
-    """
-    from datetime import datetime
+#     Returns:
+#         Dictionary with keys: date, sentiment_label, sentiment_score, phi, emotion_sentences
+#     """
+#     from datetime import datetime
     
-    if date is None:
-        date = analysis_result.entry.meta.get("date", datetime.now().strftime("%Y-%m-%d"))
+#     if date is None:
+#         date = analysis_result.entry.meta.get("date", datetime.now().strftime("%Y-%m-%d"))
     
-    return {
-        "date": date,
-        "sentiment_label": analysis_result.emotion.label,
-        "sentiment_score": analysis_result.emotion.score,
-        "phi": analysis_result.extra.get("phi", {}),
-        "emotion_sentences": analysis_result.emotion.sentences or [],
-    }
+#     return {
+#         "date": date,
+#         "sentiment_label": analysis_result.emotion.label,
+#         "sentiment_score": analysis_result.emotion.score,
+#         "phi": analysis_result.extra.get("phi", {}),
+#         "emotion_sentences": analysis_result.emotion.sentences or [],
+#     }
