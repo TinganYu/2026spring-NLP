@@ -23,14 +23,8 @@ class EmotionResult:
 
 
 @dataclass
-class Symptom:
-    name: str
-    match: str
-
-
-@dataclass
 class AnalysisResult:
     entry: DiaryEntry
     emotion: EmotionResult
-    symptoms: List[Symptom]
+    symptoms: List[Dict[str, Any]]
     extra: Dict[str, Any] = None

@@ -11,3 +11,4 @@ ipykernel
 wordcloud
 matplotlib
 snownlp
+pytest

@@ -68,8 +68,6 @@ class HealthRelationItem:
 class HealthAnalysisResult:
     original_text: str
     translated_text: str
-    detected_language: Optional[str]
-    target_language: str
     entities: List[HealthEntityItem]
     relations: List[HealthRelationItem]
     translation: Optional[TranslationResult] = None
@@ -173,8 +171,6 @@ def analyze_healthcare_entities(
         return HealthAnalysisResult(
             original_text=text,
             translated_text="",
-            detected_language=None,
-            target_language=target_language,
             entities=[],
             relations=[],
             translation=None,
@@ -210,8 +206,6 @@ def analyze_healthcare_entities(
         return HealthAnalysisResult(
             original_text=text,
             translated_text=final_text,
-            detected_language=getattr(translation_result, "detected_language", None),
-            target_language=target_language,
             entities=[],
             relations=[],
             translation=translation_result,
@@ -224,8 +218,6 @@ def analyze_healthcare_entities(
     return HealthAnalysisResult(
         original_text=text,
         translated_text=final_text,
-        detected_language=getattr(translation_result, "detected_language", None),
-        target_language=target_language,
         entities=entities,
         relations=relations,
         translation=translation_result,

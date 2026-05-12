@@ -1,4 +1,6 @@
-from .models import DiaryEntry, AnalysisResult, Symptom
+from dataclasses import asdict
+
+from .models import DiaryEntry, AnalysisResult
 from .emotion import detect_emotion
 from .analysis import build_correlation_discovery, build_doctor_visit_prep
 from shared.pii import review_pii
@@ -20,48 +22,9 @@ PHI_INTERESTING_CATEGORIES = {
     "ConditionQualifier",
 }
 
-
-def _entity_to_dict(entity):
-    return {
-        "text": entity.text,
-        "normalized_text": entity.normalized_text,
-        "category": entity.category,
-        "subcategory": entity.subcategory,
-        "offset": entity.offset,
-        "confidence_score": entity.confidence_score,
-        "data_sources": [
-            {
-                "entity_id": source.entity_id,
-                "name": source.name,
-            }
-            for source in entity.data_sources
-        ],
-        "assertion": None
-        if entity.assertion is None
-        else {
-            "conditionality": entity.assertion.conditionality,
-            "certainty": entity.assertion.certainty,
-            "association": entity.assertion.association,
-        },
-    }
-
-
-def _relation_to_dict(relation):
-    return {
-        "relation_type": relation.relation_type,
-        "roles": [
-            {
-                "name": role.name,
-                "entity_text": role.entity_text,
-            }
-            for role in relation.roles
-        ],
-    }
-
-
 def _summarize_phi(health_result):
-    entities = [_entity_to_dict(entity) for entity in health_result.entities]
-    relations = [_relation_to_dict(relation) for relation in health_result.relations]
+    entities = [asdict(entity) for entity in health_result.entities]
+    relations = [asdict(relation) for relation in health_result.relations]
 
     entities_by_category = {}
     for entity in entities:
@@ -83,8 +46,7 @@ def _summarize_phi(health_result):
     return {
         "input_text": health_result.original_text,
         "translated_text": health_result.translated_text,
-        "detected_language": health_result.detected_language,
-        "target_language": health_result.target_language,
+        "translation": health_result.translation,
         "symptom_or_sign": symptom_or_sign, # 特別把症狀和體徵整理出來，因為這是日記分析中最常關注的資訊之一
         "important_entities": important_entities,
         "entities_by_category": entities_by_category,
@@ -93,14 +55,7 @@ def _summarize_phi(health_result):
     }
 
 
-def _phi_symptoms_to_model(phi_summary): # 把 PHI 的 SymptomOrSign 實體轉換成我們模型裡的 Symptom 物件列表
-    return [
-        Symptom(
-            name=entity.get("text") or entity.get("normalized_text") or "",
-            match=entity.get("category") or "SymptomOrSign",
-        )
-        for entity in phi_summary.get("symptom_or_sign", [])
-    ]
+# 不再把 Symptom 轉成 dataclass，直接使用 summarize_phi 內的 symptom_or_sign
 
 # 這裡的apply_pii_mask是使用者的選項，決定是否要在分析前先遮蔽PII。預設為True，表示會遮蔽。
 def process_entry(text: str, meta: dict = None, apply_pii_mask: bool = True) -> AnalysisResult:
@@ -118,7 +73,9 @@ def process_entry(text: str, meta: dict = None, apply_pii_mask: bool = True) -> 
     emotion = detect_emotion(processed_text)
     phi_result = analyze_healthcare_entities(processed_text, target_language="en")
     phi_summary = _summarize_phi(phi_result)
-    symptoms = _phi_symptoms_to_model(phi_summary)
+    # 保持 symptoms 為 summarize_phi 的原始清單（list of dict）
+    symptoms = phi_summary.get("symptom_or_sign", [])
+    
     return AnalysisResult(
         entry=entry,
         emotion=emotion,
@@ -138,7 +95,6 @@ def process_entry(text: str, meta: dict = None, apply_pii_mask: bool = True) -> 
                 ],
             },
             "pii_applied": apply_pii_mask and pii_review.needs_masking,
-            "original_text": text,
             "phi": phi_summary,
             "analysis": {
                 "correlation_discovery": build_correlation_discovery(phi_summary, emotion_label=emotion.label),
