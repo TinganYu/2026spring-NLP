@@ -4,7 +4,7 @@ azure-ai-textanalytics
 nltk
 jieba
 Wikipedia-API
-
+flask
 python-dotenv
 ipython
 ipykernel

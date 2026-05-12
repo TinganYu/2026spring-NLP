@@ -147,30 +147,3 @@ def process_entry(text: str, meta: dict = None, apply_pii_mask: bool = True) -> 
         },
     )
 
-
-# def to_visualization_record(analysis_result: AnalysisResult, date: str = None) -> dict:
-#     """Convert AnalysisResult to visualization-friendly format.
-    
-#     This helper function prepares data from process_entry() for use with
-#     visualization.py functions like build_emotion_line_chart() and 
-#     build_emotion_symptom_cooccurrence().
-    
-#     Args:
-#         analysis_result: Output from process_entry()
-#         date: Date string (YYYY-MM-DD). If None, uses meta['date'] or current date.
-        
-#     Returns:
-#         Dictionary with keys: date, sentiment_label, sentiment_score, phi, emotion_sentences
-#     """
-#     from datetime import datetime
-    
-#     if date is None:
-#         date = analysis_result.entry.meta.get("date", datetime.now().strftime("%Y-%m-%d"))
-    
-#     return {
-#         "date": date,
-#         "sentiment_label": analysis_result.emotion.label,
-#         "sentiment_score": analysis_result.emotion.score,
-#         "phi": analysis_result.extra.get("phi", {}),
-#         "emotion_sentences": analysis_result.emotion.sentences or [],
-#     }
