@@ -25,7 +25,7 @@ app = Flask(__name__)
 app.json.sort_keys = False
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
-def _remove_data_sources(obj): # 因為PHI提供的data sources 實在是太多了，看得有點花。回傳時就先不加入這個欄位，但是提供router之後可以取得完整資料
+def _remove_data_sources(obj): # 因為PHI提供的data sources 實在是太多了，看得有點花。回傳時就先不加入這個欄位，但是看DB要不要存囉
     """遞迴移除所有巢狀結構中的 data_sources 欄位，但保留其他資料。"""
     if isinstance(obj, dict):
         return {k: _remove_data_sources(v) for k, v in obj.items() if k != "data_sources"}

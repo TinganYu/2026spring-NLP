@@ -66,7 +66,7 @@ def process_entry(text: str, meta: dict = None) -> AnalysisResult:
     entry = DiaryEntry(text=processed_text, meta=meta or {})
     emotion = detect_emotion(processed_text)
     phi_result = analyze_healthcare_entities(processed_text, target_language="en")
-    phi_summary = _summarize_phi(phi_result)
+    phi_summary = _summarize_phi(phi_result) #轉成 json 格式，並加入自己的整理的東西(不確定是否需要，可能看之後視覺化要怎麼做再調整)
     # 保持 symptoms 為 summarize_phi 的原始清單（list of dict）
     symptoms = phi_summary.get("symptom_or_sign", [])
     
