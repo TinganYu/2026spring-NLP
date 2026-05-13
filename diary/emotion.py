@@ -58,8 +58,8 @@ def detect_emotion(text: str) -> EmotionResult:
         totals["neutral"] += float(scores.neutral)
         totals["negative"] += float(scores.negative)
 
-    overall_label = max(totals, key=totals.get)
+    overall_label = max(totals, key=totals.get) # 整體情緒標籤由三個類別中分數最高的決定
     total_sum = sum(totals.values())
-    overall_score = float(totals[overall_label] / total_sum) if total_sum > 0 else 0.0
+    overall_score = float(totals[overall_label] / total_sum) if total_sum > 0 else 0.0 # 整體情緒強度則是該類別的分數占總分的比例，這樣可以反映出在整體文本中該情緒的相對強度
 
     return EmotionResult(label=overall_label, score=overall_score, sentences=sentences_out)

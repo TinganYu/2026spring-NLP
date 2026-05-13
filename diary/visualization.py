@@ -67,7 +67,7 @@ def _sort_records_by_date(records: Iterable[Any]) -> List[Any]:
 
 
 def build_emotion_line_chart(records: Iterable[Any]) -> Dict[str, Any]:
-    """把每筆資料整理成情緒折線圖資料。"""
+    """把每筆資料整理成情緒極性折線圖資料。"""
     sorted_records = _sort_records_by_date(records)
     labels = []
     values = []
@@ -76,7 +76,10 @@ def build_emotion_line_chart(records: Iterable[Any]) -> Dict[str, Any]:
     for record in sorted_records:
         date_text = _get_date(record)
         labels.append(date_text)
-        values.append(_extract_sentiment_score(record))
+        score = _extract_sentiment_score(record)
+        label = _extract_sentiment_label(record).lower()
+        polarity = -score if label == "negative" else score if label == "positive" else 0.0
+        values.append(polarity)
 
         phi = _get_phi(record)
         symptom_names = [
@@ -95,6 +98,7 @@ def build_emotion_line_chart(records: Iterable[Any]) -> Dict[str, Any]:
                 "date": date_text,
                 "emotion_label": _extract_sentiment_label(record),
                 "emotion_score": _extract_sentiment_score(record),
+                "emotion_polarity": polarity,
                 "symptoms": symptom_names,
                 "medications": medication_names,
                 "relations": phi.get("relations", []),
@@ -106,8 +110,8 @@ def build_emotion_line_chart(records: Iterable[Any]) -> Dict[str, Any]:
         "labels": labels,
         "series": [
             {
-                "name": "emotion_score",
-                "label": "Emotion Score",
+                "name": "emotion_polarity",
+                "label": "Emotion Polarity",
                 "type": "line",
                 "data": values,
                 "y_axis": "emotion",

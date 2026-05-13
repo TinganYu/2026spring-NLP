@@ -38,26 +38,19 @@ class PIIReview:
     redacted_text: Optional[str] = None
 
 
-def _call_pii_api(text: str, language: Optional[str] = None) -> Dict[str, Any]:
-    '''
-    調用 Azure PII API 進行分析
-    
-    輸出:
-    entities列表
-    redacted_text: 已經過遮蔽處理的文本
-    '''
+def review_pii(text: str, language: Optional[str] = None) -> PIIReview:
+    """檢查文本中是否包含 PII，並回傳整理好的 review 結果。"""
     if not _AZURE_KEY or not _AZURE_ENDPOINT:
         raise RuntimeError("Azure API Key 或 Endpoint 未設定。")
 
     endpoint = _AZURE_ENDPOINT.rstrip("/")
     api_url = f"{endpoint}/language/:analyze-text?api-version=2025-11-15-preview"
-    
+
     headers = {
         "Ocp-Apim-Subscription-Key": _AZURE_KEY,
         "Content-Type": "application/json",
     }
-    
-    # 直接在此定義 request body
+
     body = {
         "kind": "PiiEntityRecognition",
         "parameters": {
@@ -72,7 +65,7 @@ def _call_pii_api(text: str, language: Optional[str] = None) -> Dict[str, Any]:
                 "Organization",
             ],
             "redactionPolicy": {
-                "policyKind": "entityMask", # azure會自動回傳實體類別覆蓋，例如[person1]
+                "policyKind": "entityMask",
             },
         },
         "analysisInput": {
@@ -101,42 +94,17 @@ def _call_pii_api(text: str, language: Optional[str] = None) -> Dict[str, Any]:
 
     docs = result["results"]["documents"]
     if not docs:
-        return {"entities": [], "redacted_text": text} # 如果沒有文件結果，直接回傳空實體列表和原始文本（不遮蔽）
+        parsed_entities: List[Dict[str, Any]] = []
+        parsed_redacted_text = text
+    else:
+        doc = docs[0]
+        parsed_entities = doc.get("entities", [])
+        parsed_redacted_text = doc.get("redactedText", text)
 
-    doc = docs[0]
-    entities = doc.get("entities", [])
-    redacted_text = doc.get("redactedText", text)
-
-    return {
-        "entities": entities,
-        "redacted_text": redacted_text,
-    }
-
-
-def review_pii(text: str, language: Optional[str] = None) -> PIIReview:
-    '''
-    檢查文本中是否包含PII（Personally Identifiable Information）
-
-    輸出格式:
-        {
-        "needs_masking": true,
-        "entities": [
-            {
-            "text": "0912-345-678",
-            "category": "PhoneNumber",
-            "start": 5,
-            "end": 17,
-            "confidence_score": 0.99
-            }...
-        ],
-        "redacted_text": "聯絡我 *********** 或 ****************"
-        }
-    '''
-    parsed = _call_pii_api(text, language=language)
-
+    # 這邊就是將結果轉換成我的data class而已
     items: List[PIIItem] = []
-    for e in parsed["entities"]:
-        offset = int(e.get("offset", 0) or 0)  #這裡保留字的位置，說不定前端可以加入顏色、螢光筆顯示?
+    for e in parsed_entities:
+        offset = int(e.get("offset", 0) or 0)
         length = int(e.get("length", 0) or 0)
         items.append(
             PIIItem(
@@ -151,33 +119,8 @@ def review_pii(text: str, language: Optional[str] = None) -> PIIReview:
     return PIIReview(
         needs_masking=len(items) > 0,
         entities=items,
-        redacted_text=parsed["redacted_text"],
+        redacted_text=parsed_redacted_text,
     )
-
-# ============= Helper functions for common use cases =============
-# 這些函數提供更簡單的接口，讓使用者可以直接獲取PII實體列表、是否需要遮蔽，以及遮蔽後的文本。
-# 但要先呼叫review_pii來避免重複調用API
-
-def detect_pii(text: str, language: Optional[str] = None) -> List[PIIItem]:
-    '''只回傳PII實體列表，不包含redacted_text等額外資訊'''
-    return review_pii(text, language=language).entities
-
-
-def has_pii(text: str, language: Optional[str] = None) -> bool:
-    '''只回傳是否需要遮蔽，不包含實體列表或redacted_text等額外資訊'''
-    return review_pii(text, language=language).needs_masking
-
-
-def mask_pii(
-    text: str,
-    language: Optional[str] = None,
-    review: Optional[PIIReview] = None,
-) -> str:
-    """只回傳 Azure redaction result.
-    Pass `review` when you already called `review_pii` to avoid an extra API call.
-    """
-    pii_review = review or review_pii(text, language=language)
-    return pii_review.redacted_text or text
 
 
 if __name__ == "__main__":

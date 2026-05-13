@@ -2,9 +2,10 @@ import sys
 import configparser
 from azure.core.credentials import AzureKeyCredential
 from azure.core.exceptions import HttpResponseError
-from dataclasses import dataclass, asdict
+from dataclasses import asdict
 from flask import Flask, request, abort, render_template, url_for, Blueprint, jsonify
 from diary.processor import process_entry
+from shared.pii import review_pii
 
 # Config Parser
 config = configparser.ConfigParser()
@@ -42,6 +43,13 @@ def process_diary():
         # 移除 API 回傳中的 data_sources（保留完整內部數據）
         cleaned_result = _remove_data_sources(result_dict)
         return jsonify(cleaned_result)
+
+
+@app.route("/diary_pii_review", methods=["POST"])
+def diary_pii_review():
+    text = request.json.get("text", "")
+    review = review_pii(text)
+    return jsonify(asdict(review))
 
 
 @app.route("/")  #一打開網站要做的事情

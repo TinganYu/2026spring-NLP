@@ -3,7 +3,6 @@ from dataclasses import asdict
 from .models import DiaryEntry, AnalysisResult
 from .emotion import detect_emotion
 from .analysis import build_correlation_discovery, build_doctor_visit_prep
-from shared.pii import review_pii
 from shared.phi import analyze_healthcare_entities
 
 
@@ -31,7 +30,7 @@ def _summarize_phi(health_result):
         category = entity["category"] or "Unknown"
         entities_by_category.setdefault(category, []).append(entity) # 按照 category 分類實體，方便後續分析和視覺化
 
-    important_entities = [
+    important_entities = [ # 這邊是根據預定義的 PHI_INTERESTING_CATEGORIES 來篩選出重要的實體，這樣在後續的分析和視覺化中就可以專注於這些類別的實體，而不會被其他不太相關的實體干擾
         entity
         for entity in entities
         if entity["category"] in PHI_INTERESTING_CATEGORIES
@@ -57,17 +56,12 @@ def _summarize_phi(health_result):
 
 # 不再把 Symptom 轉成 dataclass，直接使用 summarize_phi 內的 symptom_or_sign
 
-# 這裡的apply_pii_mask是使用者的選項，決定是否要在分析前先遮蔽PII。預設為True，表示會遮蔽。
-def process_entry(text: str, meta: dict = None, apply_pii_mask: bool = True) -> AnalysisResult:
+def process_entry(text: str, meta: dict = None) -> AnalysisResult:
     """Orchestrator: receives a diary text and returns structured analysis.
 
-    It first checks whether the text contains PII. If `apply_pii_mask` is True,
-    the text will be masked before emotion and symptom analysis.
+    The caller is responsible for any PII review or masking before invoking this.
     """
-    pii_review = review_pii(text)
-    processed_text = (
-        pii_review.redacted_text if apply_pii_mask and pii_review.needs_masking else text
-    )
+    processed_text = text
 
     entry = DiaryEntry(text=processed_text, meta=meta or {})
     emotion = detect_emotion(processed_text)
@@ -81,22 +75,8 @@ def process_entry(text: str, meta: dict = None, apply_pii_mask: bool = True) -> 
         emotion=emotion,
         symptoms=symptoms,
         extra={
-            "pii_review": {
-                "needs_masking": pii_review.needs_masking,
-                "entities": [
-                    {
-                        "text": entity.text,
-                        "category": entity.category,
-                        "start": entity.start,
-                        "end": entity.end,
-                        "confidence_score": entity.confidence_score,
-                    }
-                    for entity in pii_review.entities
-                ],
-            },
-            "pii_applied": apply_pii_mask and pii_review.needs_masking,
             "phi": phi_summary,
-            "analysis": {
+            "analysis": { #這只是我暫時對phi裡面的資料作處理，但是之後可能會再改
                 "correlation_discovery": build_correlation_discovery(phi_summary, emotion_label=emotion.label),
                 "doctor_visit_prep": build_doctor_visit_prep(phi_summary),
             },

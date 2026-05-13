@@ -45,7 +45,8 @@ def test_build_emotion_line_chart():
 
     assert payload["chart_type"] == "line"
     assert payload["labels"] == ["2026-05-01", "2026-05-02"]
-    assert payload["series"][0]["data"] == [0.2, 0.6]
+    assert payload["series"][0]["data"] == [-0.2, 0.0]
+    assert payload["markers"][0]["emotion_polarity"] == -0.2
     assert payload["markers"][0]["symptoms"] == ["headache"]
     assert payload["markers"][0]["medications"] == ["ibuprofen"]
 

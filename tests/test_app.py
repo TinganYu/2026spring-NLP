@@ -6,6 +6,27 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 import app as app_module
+from shared.pii import PIIItem, PIIReview
+
+
+def test_diary_pii_review_endpoint(monkeypatch):
+    review = PIIReview(
+        needs_masking=True,
+        entities=[PIIItem(text="0912-345-678", category="PhoneNumber", start=0, end=12, confidence_score=0.99)],
+        redacted_text="聯絡我 ************",
+    )
+    monkeypatch.setattr(app_module, "review_pii", lambda text: review)
+
+    client = app_module.app.test_client()
+    response = client.post("/diary_pii_review", json={"text": "聯絡我 0912-345-678"})
+
+    payload = response.get_json()
+    assert response.status_code == 200
+    assert payload["needs_masking"] is True
+    assert payload["entities"][0]["category"] == "PhoneNumber"
+    assert payload["redacted_text"] == "聯絡我 ************"
+
+
 def test_diary_process_real_output_and_remove_data_sources():
 
     client = app_module.app.test_client()
