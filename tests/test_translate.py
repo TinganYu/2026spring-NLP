@@ -24,13 +24,13 @@ class _FakeResponseItem:
 class _FakeClient:
     def __init__(self):
         self.calls = []
-
-    def translate(self, body, to_language, from_language=None):
+    def translate(self, body, to_language=None, from_language=None, **kwargs):
         self.calls.append(
             {
                 "body": body,
                 "to_language": to_language,
                 "from_language": from_language,
+                "extra": kwargs,
             }
         )
         return [_FakeResponseItem()]

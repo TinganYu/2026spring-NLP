@@ -43,8 +43,9 @@ def test_diary_process_real_output_and_remove_data_sources(mock_azure_apis):
 
     assert response.status_code == 200, response.get_data(as_text=True)
 
-    # API 返回 DiaryRecord 格式（not AnalysisResult）
+    # API 返回包含 `raw_saved` 與 `view_model`，檢查 view_model 的欄位
     assert "data_sources" not in str(payload)
-    assert "date" in payload  # DiaryRecord 有 date
-    assert "emotion_label" in payload  # DiaryRecord 有 emotion_label
-    assert "symptoms" in payload
+    view = payload.get("view_model", {})
+    assert "date" in view  # DiaryRecord 有 date
+    assert "emotion_label" in view  # DiaryRecord 有 emotion_label
+    assert "symptoms" in view

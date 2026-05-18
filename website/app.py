@@ -71,7 +71,7 @@ def process_diary():
 def diary_pii_review():
     text = request.json.get("text", "")
     review = review_pii(text) 
-    return jsonify(asdict(review))
+    return jsonify(review)
 
 @app.route("/")  #一打開網站要做的事情
 def home():
