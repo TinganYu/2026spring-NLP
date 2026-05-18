@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, TypedDict
 from azure.ai.textanalytics import HealthcareEntityRelation, TextAnalyticsClient
 from azure.core.credentials import AzureKeyCredential
 
-from shared.translate import TranslationResult, translate_text
+from shared.translate import TranslationResult, translate_text, _get_original_text_from_alignment
 
 
 config = configparser.ConfigParser()
@@ -207,6 +207,24 @@ def analyze_healthcare_entities(
     doc = docs[0]
     entities = [_to_entity_item(entity) for entity in getattr(doc, "entities", []) or []]
     relations = [_to_relation_item(relation) for relation in getattr(doc, "entity_relations", []) or []]
+    
+    # 嘗試用翻譯對齊矩陣把英文實體位置反推回中文原文，存到 name_zh 欄位
+    translations_list = translation_result.get("translations", []) if translation_result else []
+    alignment_proj = translations_list[0].get("alignment") if translations_list else None
+    for ent in entities:
+        if ent.get("category") in {"SymptomOrSign", "MedicationName"}:
+            offset = ent.get("offset")
+            length = len(ent.get("text", ""))
+            
+            # 查表反推最原始的中文字
+            original_zh = _get_original_text_from_alignment(
+                original_text=text,
+                alignment_proj=alignment_proj,
+                target_offset=offset,
+                target_length=length
+            )
+            # 存入字典中，這樣存進 DB 的時候就會自帶中文
+            ent["name_zh"] = original_zh if original_zh else ent.get("text")
 
     detected_language = None
     if translation_result is not None:

@@ -6,7 +6,7 @@ import pytest
 # Ensure project root is importable when running this file directly.
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-import app as app_module
+import website.app as app_module
 from shared.pii import PIIItem, PIIReview
 
 
@@ -43,7 +43,8 @@ def test_diary_process_real_output_and_remove_data_sources(mock_azure_apis):
 
     assert response.status_code == 200, response.get_data(as_text=True)
 
-    # API layer should strip data_sources recursively.
+    # API 返回 DiaryRecord 格式（not AnalysisResult）
     assert "data_sources" not in str(payload)
-    assert "entry" in payload
+    assert "date" in payload  # DiaryRecord 有 date
+    assert "emotion_label" in payload  # DiaryRecord 有 emotion_label
     assert "symptoms" in payload

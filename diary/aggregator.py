@@ -14,19 +14,30 @@ from .visualization import build_health_dashboard_payload
 
 
 def aggregate_weekly_records(records: List[AnalysisResult]) -> Dict[str, Any]:
-    """Aggregate 7 days of diary records into weekly analysis."""
+    """Aggregate 7 days of diary records into weekly analysis.
+    
+    接收 AnalysisResult 列表，轉成 DiaryRecord 並生成圖表。
+    """
     if not records:
-        return _empty_weekly_summary()
+        return {
+        "week_start": None,
+        "week_end": None,
+        "record_count": 0,
+        "emotion_statistics": {},
+        "phi_relations": [],
+        "emotion_line_chart": {},
+        "symptom_frequency_chart": {},
+        "medication_frequency_chart": {},
+        "cooccurrence_chart": {},
+        "symptom_timeline": {},
+        "symptom_severity_chart": {},
+        "medication_timeline": {},
+        "emotion_heatmap_calendar": {},
+        "cooccurrence_heatmap": {},
+    }
 
-    # Accept either a list of AnalysisResult objects or already-formed DiaryRecord dicts.
-    first = records[0]
-    if isinstance(first, dict) and first.get("date"):
-        diary_records = list(records)
-        phi_sources = None
-    else:
-        diary_records = [to_diary_record(record, record.entry.meta.get("date") or "") for record in records]
-        phi_sources = records
-
+    # 將 AnalysisResult 轉成 DiaryRecord（dict 格式）
+    diary_records = [to_diary_record(record, record["entry"]["meta"].get("date") or "") for record in records]
     diary_records.sort(key=lambda x: x["date"])
 
     dashboard = build_health_dashboard_payload(diary_records)
@@ -47,18 +58,18 @@ def aggregate_weekly_records(records: List[AnalysisResult]) -> Dict[str, Any]:
         elif trend_value < -0.1:
             emotion_stats["trend_direction"] = "declining"
 
+    # 提取 PHI 關係（從原始 AnalysisResult）
     all_relations = []
-    if phi_sources is not None:
-        for record in phi_sources:
-            phi_summary = getattr(record, "phi", {}) or {}
-            for relation in phi_summary.get("relations", []):
-                all_relations.append(
-                    {
-                        "relation_type": relation.get("relation_type"),
-                        "roles": relation.get("roles", []),
-                        "date": record.entry.meta.get("date"),
-                    }
-                )
+    for record in records:
+        phi_summary = record.get("phi") or {}
+        for relation in phi_summary.get("relations", []):
+            all_relations.append(
+                {
+                    "relation_type": relation.get("relation_type"),
+                    "roles": relation.get("roles", []),
+                    "date": record["entry"]["meta"].get("date"),
+                }
+            )
 
     grouped_relations = defaultdict(list)
     for relation in all_relations:
@@ -78,21 +89,3 @@ def aggregate_weekly_records(records: List[AnalysisResult]) -> Dict[str, Any]:
         **dashboard,
     }
 
-
-def _empty_weekly_summary() -> Dict[str, Any]:
-    return {
-        "week_start": None,
-        "week_end": None,
-        "record_count": 0,
-        "emotion_statistics": {},
-        "phi_relations": [],
-        "emotion_line_chart": {},
-        "symptom_frequency_chart": {},
-        "medication_frequency_chart": {},
-        "cooccurrence_chart": {},
-        "symptom_timeline": {},
-        "symptom_severity_chart": {},
-        "medication_timeline": {},
-        "emotion_heatmap_calendar": {},
-        "cooccurrence_heatmap": {},
-    }

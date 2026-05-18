@@ -8,8 +8,8 @@ from diary.processor import process_entry
 from shared.pii import review_pii
 import website.database as db
 from diary.analysis import to_diary_record
-from diary.aggregator import aggregate_weekly_records
-from diary.models import AnalysisResult, DiaryEntry, EmotionResult 
+from diary.aggregator import aggregate_weekly_records 
+from dataclasses import asdict
 
 # Config Parser
 config = configparser.ConfigParser()
@@ -38,50 +38,40 @@ def _remove_data_sources(obj): # 因為PHI提供的data sources 實在是太多�
 
 @app.route("/api/weekly_dashboard", methods=["GET"])
 def get_weekly_dashboard():
-    user_id = request.args.get("user_id") # 或是從 session 拿
-    # 這裡可以讓前端傳日期，或是後端自動推算過去 7 天
+    user_id = request.args.get("user_id")
     start_date = request.args.get("start_date") 
     end_date = request.args.get("end_date")
     
-    # 1. 從 MongoDB 撈出這段時間的日記 (這部分要看你們 db.py 的實作)
-    # 假設 db.get_diaries_by_range 回傳的是一個 dict 列表
-    raw_db_records = db.get_diaries_by_range(user_id, start_date, end_date)
+    # 從 DB 取出時間範圍內的日記（AnalysisResult 格式）
+    analysis_records = db.get_diaries_by_range(user_id, start_date, end_date)
     
-    # 2. 將 DB 資料還原成 aggregator 認得的 AnalysisResult 物件列表
-    analysis_records = []
-    for doc in raw_db_records:
-        # DB 內存的已是 dict 形態，直接從內上拖出
-        record: AnalysisResult = {
-            "entry": {"text": doc.get("text", ""), "meta": {"date": doc.get("date", "")}},
-            "emotion": {"label": doc.get("emotion_label", ""), "score": doc.get("emotion_score", 0.0)},
-            "phi": doc.get("phi", {}),
-            "symptoms": doc.get("symptoms", []),
-        }
-        analysis_records.append(record)
-        
-    # 3. 呼叫聚合器，直接生成所有圖表
+    # 直接聚合生成圖表
     dashboard_payload = aggregate_weekly_records(analysis_records)
-    
-    # 4. 回傳給前端，前端接去畫圖即可
     return jsonify(dashboard_payload)
 
 @app.route("/diary_process", methods=["POST"])  #接收前端送來的日記內容，並回傳分析結果
 def process_diary():
     if request.method == "POST":
         print("POST!")
-        text = request.json.get("text") #日記內容 (理想是先呼叫PII，使用者決定是否要遮蔽，然後再送原始訊息或是處理後的訊息到這裡分析)
-        meta = request.json.get("meta") #使用者資訊(可能之後看情況會刪?)
-        result = process_entry(text, meta)  # result 當下是 dict
-        cleaned_result = _remove_data_sources(result)  # 移除 data sources 後的乾淨結果，準備存 DB 和回傳給前端
+        text = request.json.get("text")
+        meta = request.json.get("meta")
+        result = process_entry(text, meta)  # AnalysisResult dict
+        cleaned_result = _remove_data_sources(result)  # 移除 data sources
         if hasattr(db, "save"):
-            db.save(cleaned_result)  # 假設這是存 DB 的動作
-        return jsonify(cleaned_result)  # 直接回傳 cleaned_result（AnalysisResult dict）
+            db.save(cleaned_result)  # 存整個 AnalysisResult 到 DB
+        
+        # 同時轉成 DiaryRecord 回傳給前端
+        diary_record_view = to_diary_record(result, (meta or {}).get("date", ""))
+        return jsonify({
+            "raw_saved": cleaned_result,
+            "view_model": diary_record_view 
+        })
 
 @app.route("/diary_pii_review", methods=["POST"])  #接收前端送來的內容，並回傳PII審核結果
 def diary_pii_review():
     text = request.json.get("text", "")
-    review = review_pii(text)  # review 當下是 dict
-    return jsonify(review)
+    review = review_pii(text) 
+    return jsonify(asdict(review))
 
 @app.route("/")  #一打開網站要做的事情
 def home():
