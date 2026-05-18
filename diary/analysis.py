@@ -4,37 +4,17 @@
 這些函式通常在使用者請求時被呼叫，而非在每次 process_entry 時執行。
 """
 
-from collections import Counter, defaultdict
+from collections import Counter
 from typing import Any, Dict, List
+from dataclasses import asdict
+from .models import DiaryRecord, SymptomRecord, MedicationRecord, AnalysisResult
 
-
-def _entity_label(entity: Dict[str, Any]) -> str:
-    # 優先取原始文字，沒有就用標準化後的文字
-    return entity.get("text") or entity.get("normalized_text") or ""
-
-
-def _relation_roles_map(relation: Dict[str, Any]) -> Dict[str, str]:
-    # 把 relation 裡的角色整理成 {角色名稱: 實體文字}，方便後面組句子
-    roles = {}
-    for role in relation.get("roles", []):
-        name = role.get("name") or "Unknown"
-        roles[name] = role.get("entity_text") or ""
-    return roles
-
-
-def _assertion_summary(entity: Dict[str, Any]) -> Dict[str, Any] | None:
-    # assertion 用來表示這個實體是肯定、否定、條件式或不確定
-    assertion = entity.get("assertion")
-    if not assertion:
-        return None
-
-    return {
-        "text": _entity_label(entity),
-        "category": entity.get("category"),
-        "conditionality": assertion.get("conditionality"),
-        "certainty": assertion.get("certainty"),
-        "association": assertion.get("association"),
-    }
+# severity mapping for qualifiers (copied to keep consistent behavior with processor)
+SEVERITY_MAP = {
+    "severe": 3, "serious": 3, "intense": 3, "extreme": 3, "excruciating": 3,
+    "moderate": 2, "significant": 2,
+    "mild": 1, "slight": 1, "minor": 1, "minimal": 1,
+}
 
 
 def build_correlation_discovery(phi: Dict[str, Any], emotion_label: str = None) -> Dict[str, Any]:
@@ -49,18 +29,23 @@ def build_correlation_discovery(phi: Dict[str, Any], emotion_label: str = None) 
     # 統計每種 entity category 出現次數
     categories = Counter(entity.get("category") for entity in entities if entity.get("category"))
 
-    # 找出最重要的幾類資訊
-    # 不在此回傳完整 symptom_or_sign，避免和 AnalysisResult.symptoms 重複
     medications = [entity for entity in entities if entity.get("category") == "MedicationName"]
+    assertions = [
+        {
+            "text": entity.get("text") or entity.get("normalized_text") or "",
+            "category": entity.get("category"),
+            "conditionality": entity.get("assertion", {}).get("conditionality"),
+            "certainty": entity.get("assertion", {}).get("certainty"),
+            "association": entity.get("assertion", {}).get("association"),
+        }
+        for entity in entities
+        if entity.get("assertion")
+    ]
 
-    # 把有 assertion 的實體先整理出來，方便判斷是否要納入統計
-    assertions = [summary for entity in entities if (summary := _assertion_summary(entity))]
-
-    # relation 可以直接描述實體之間的關係，例如症狀發生時間、用藥頻率等
     relation_facts = []
     for relation in relations:
         relation_type = relation.get("relation_type") or "Unknown"
-        roles = _relation_roles_map(relation)
+        roles = {role.get("name") or "Unknown": role.get("entity_text") or "" for role in relation.get("roles", [])}
         relation_facts.append(
             {
                 "relation_type": relation_type,
@@ -96,7 +81,7 @@ def build_doctor_visit_prep(phi: Dict[str, Any]) -> Dict[str, Any]:
     timeline_items = []
     for relation in relations:
         relation_type = relation.get("relation_type") or "Unknown"
-        roles = _relation_roles_map(relation)
+        roles = {role.get("name") or "Unknown": role.get("entity_text") or "" for role in relation.get("roles", [])}
         if relation_type in {"TimeOfCondition", "DurationOfCondition", "FrequencyOfMedication"}:
             timeline_items.append(
                 {
@@ -106,11 +91,17 @@ def build_doctor_visit_prep(phi: Dict[str, Any]) -> Dict[str, Any]:
                 }
             )
 
-    assertion_flags = []
-    for entity in entities:
-        if entity.get("assertion"):
-            # 有 assertion 的內容通常代表更需要注意真假或條件
-            assertion_flags.append(_assertion_summary(entity))
+    assertion_flags = [
+        {
+            "text": entity.get("text") or entity.get("normalized_text") or "",
+            "category": entity.get("category"),
+            "conditionality": entity.get("assertion", {}).get("conditionality"),
+            "certainty": entity.get("assertion", {}).get("certainty"),
+            "association": entity.get("assertion", {}).get("association"),
+        }
+        for entity in entities
+        if entity.get("assertion")
+    ]
 
     return {
         # `symptom_or_sign` 在看診懶人包需要完整實體，保留此處輸出（on-demand）
@@ -147,6 +138,105 @@ def _format_relation_text(relation_type: str, roles: Dict[str, str]) -> str:
         return f"{medication} 的服用頻率是 {frequency}"
 
     return f"{relation_type}: {', '.join(f'{k}={v}' for k, v in roles.items())}"
+
+
+def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
+    """將 AnalysisResult 轉換為前端與圖表直接可用的統一 DiaryRecord 結構
+
+    這個函式原先放在 `processor.py`，已搬移至此以統一管理 PHI -> 前端格式化邏輯。
+    """
+    phi = result.extra.get("phi", {})
+    entities = phi.get("entities", [])
+    relations = phi.get("relations", [])
+
+    # 解析 relations 備用
+    parsed_relations = []
+    for rel in relations:
+        roles = {r.get("name") or "Unknown": r.get("entity_text") or "" for r in rel.get("roles", [])}
+        parsed_relations.append({
+            "type": rel.get("relation_type"),
+            "roles": roles
+        })
+
+    # 1. 整理 Symptoms
+    symptom_records = []
+    for ent in entities:
+        if ent.get("category") == "SymptomOrSign":
+            key = ent.get("normalized_text") or ent.get("text") or ""
+            display = ent.get("text") or ""
+
+            status = "affirmed"
+            assertion = ent.get("assertion")
+            if assertion:
+                cert = assertion.get("certainty")
+                cond = assertion.get("conditionality")
+                temp = assertion.get("temporal")
+                assoc = assertion.get("association")
+
+                if cert in ("negative", "negative_possible"): status = "negated"
+                elif cond in ("hypothetical", "conditional"): status = "hypothetical"
+                elif temp == "past": status = "historical"
+                elif temp == "future": status = "hypothetical"
+                elif assoc == "other": status = "other_person"
+                elif cert in ("positive_possible", "neutral_possible"): status = "uncertain"
+
+            max_severity = 1
+            for pr in parsed_relations:
+                if pr["type"] == "QualifierOfCondition":
+                    cond_text = pr["roles"].get("Condition") or pr["roles"].get("Symptom")
+                    if cond_text == display:
+                        q = pr["roles"].get("Qualifier")
+                        if q and q.lower() in SEVERITY_MAP:
+                            max_severity = max(max_severity, SEVERITY_MAP[q.lower()])
+
+            symptom_records.append(SymptomRecord(
+                key=key,
+                display=display,
+                status=status,
+                severity=max_severity
+            ))
+
+    # 2. 整理 Medications
+    medication_records = []
+    for ent in entities:
+        if ent.get("category") == "MedicationName":
+            key = ent.get("normalized_text") or ent.get("text") or ""
+            display = ent.get("text") or ""
+            frequency = ""
+
+            for pr in parsed_relations:
+                if pr["type"] == "FrequencyOfMedication":
+                    med_text = pr["roles"].get("Medication") or pr["roles"].get("Drug")
+                    if med_text == display:
+                        frequency = pr["roles"].get("Frequency", "")
+                        break
+
+            medication_records.append(MedicationRecord(
+                key=key, display=display, frequency=frequency, inferred=False
+            ))
+
+    # 3. 整理 Events
+    target_event_types = {
+        "QualifierOfCondition", "TimeOfCondition", "DurationOfCondition",
+        "DosageOfMedication", "FrequencyOfMedication", "TimeOfMedication", "BodySiteOfCondition"
+    }
+    events = []
+    for pr in parsed_relations:
+        if pr["type"] in target_event_types:
+            events.append({
+                "type": pr["type"],
+                "roles": pr["roles"],
+                "text": _format_relation_text(pr["type"], pr["roles"])
+            })
+
+    return DiaryRecord(
+        date=date,
+        emotion_label=result.emotion.label,
+        emotion_score=result.emotion.score,
+        symptoms=symptom_records,
+        medications=medication_records,
+        events=events
+    )
 
 
 def _build_visit_summary(
