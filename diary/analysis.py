@@ -6,7 +6,7 @@
 
 from collections import Counter
 from typing import Any, Dict, List
-from dataclasses import asdict
+
 from .models import DiaryRecord, SymptomRecord, MedicationRecord, AnalysisResult
 
 # severity mapping for qualifiers (copied to keep consistent behavior with processor)
@@ -33,7 +33,7 @@ def build_correlation_discovery(phi: Dict[str, Any], emotion_label: str = None) 
     assertions = [
         {
             "text": entity.get("text") or entity.get("normalized_text") or "",
-            "category": entity.get("category"),
+            "category": entity.get("category"), # category內容可能是 SymptomOrSign、MedicationName 等等
             "conditionality": entity.get("assertion", {}).get("conditionality"),
             "certainty": entity.get("assertion", {}).get("certainty"),
             "association": entity.get("assertion", {}).get("association"),
@@ -145,7 +145,7 @@ def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
 
     這個函式原先放在 `processor.py`，已搬移至此以統一管理 PHI -> 前端格式化邏輯。
     """
-    phi = result.extra.get("phi", {})
+    phi = result.get("phi", {}) or {}
     entities = phi.get("entities", [])
     relations = phi.get("relations", [])
 
@@ -165,7 +165,7 @@ def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
             key = ent.get("normalized_text") or ent.get("text") or ""
             display = ent.get("text") or ""
 
-            status = "affirmed"
+            status = "affirmed" # 自己的變數，先預設是肯定，後續根據 assertion 的不同屬性調整成 negated(消失)、hypothetical、historical、uncertain、other_person 等等
             assertion = ent.get("assertion")
             if assertion:
                 cert = assertion.get("certainty")
@@ -183,7 +183,7 @@ def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
             max_severity = 1
             for pr in parsed_relations:
                 if pr["type"] == "QualifierOfCondition":
-                    cond_text = pr["roles"].get("Condition") or pr["roles"].get("Symptom")
+                    cond_text = pr["roles"].get("Condition") or pr["roles"].get("Symptom") # 有時候 relation 的 role 可能叫 Condition，有時候叫 Symptom，要兩個都檢查
                     if cond_text == display:
                         q = pr["roles"].get("Qualifier")
                         if q and q.lower() in SEVERITY_MAP:
@@ -231,8 +231,8 @@ def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
 
     return DiaryRecord(
         date=date,
-        emotion_label=result.emotion.label,
-        emotion_score=result.emotion.score,
+        emotion_label=result["emotion"]["label"],
+        emotion_score=result["emotion"]["score"],
         symptoms=symptom_records,
         medications=medication_records,
         events=events

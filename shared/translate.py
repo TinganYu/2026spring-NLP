@@ -1,7 +1,6 @@
 import configparser
 import os
-from dataclasses import dataclass
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional, Sequence, Union, TypedDict
 
 from azure.ai.translation.text import TextTranslationClient
 from azure.core.credentials import AzureKeyCredential
@@ -26,14 +25,12 @@ _AZURE_TRANSLATOR_ENDPOINT = _get_setting("AzureTranslator", "Endpoint", "AZURE_
 _AZURE_TRANSLATOR_REGION = _get_setting("AzureTranslator", "Region", "AZURE_TRANSLATOR_REGION")
 
 
-@dataclass
-class TranslationItem:
+class TranslationItem(TypedDict, total=False):
     text: str
     to: str
 
 
-@dataclass
-class TranslationResult:
+class TranslationResult(TypedDict, total=False):
     source_text: str
     detected_language: Optional[str]
     translations: List[TranslationItem]
@@ -89,7 +86,7 @@ def translate_text(
         Optional source language. If omitted, Azure can auto-detect.
     """
     if not text:
-        return TranslationResult(source_text=text, detected_language=None, translations=[])
+        return {"source_text": text, "detected_language": None, "translations": []}
 
     client = _get_client()
     targets = [target_language] if isinstance(target_language, str) else list(target_language)
@@ -111,17 +108,17 @@ def translate_text(
         raise RuntimeError(f"Azure 翻譯失敗: {exc}") from exc
 
     if not response:
-        return TranslationResult(source_text=text, detected_language=None, translations=[])
+        return {"source_text": text, "detected_language": None, "translations": []}
 
     first_item = response[0]
     detected_language = getattr(getattr(first_item, "detected_language", None), "language", None)
-    translations = [TranslationItem(text=translation.text, to=translation.to) for translation in first_item.translations]
+    translations = [{"text": translation.text, "to": translation.to} for translation in first_item.translations]
 
-    return TranslationResult(
-        source_text=text,
-        detected_language=detected_language,
-        translations=translations,
-    )
+    return {
+        "source_text": text,
+        "detected_language": detected_language,
+        "translations": translations,
+    }
 
 
 # ============= Convenience function for common use case =============
@@ -129,9 +126,10 @@ def translate_text(
 def translate_to(text: str, target_language: str, source_language: Optional[str] = None) -> str:
     """Translate text and return the first translated string for the requested target language."""
     result = translate_text(text, target_language=target_language, source_language=source_language)
-    if not result.translations:
+    # result is now a dict
+    if not result.get("translations"):
         return text
-    return result.translations[0].text
+    return result["translations"][0]["text"]
 
 
 if __name__ == "__main__":
@@ -139,7 +137,8 @@ if __name__ == "__main__":
     target_language = input("請輸入目標語言（例如 en、zh-Hant、vi、id）: ").strip() or "en"
     result = translate_text(sample_text, target_language=target_language)
 
-    print("原文：", result.source_text)
-    print("偵測語言：", result.detected_language)
-    for item in result.translations:
-        print(f"翻譯 ({item.to})：{item.text}")
+    # result is now a dict
+    print("原文：", result["source_text"])
+    print("偵測語言：", result["detected_language"])
+    for item in result["translations"]:
+        print(f"翻譯 ({item['to']})：{item['text']}")

@@ -49,7 +49,7 @@ def detect_emotion(text: str) -> EmotionResult:
 
     t = text or ""
     # Call Azure analyze_sentiment which includes sentence-level results
-    resp = text_analytics_client.analyze_sentiment(documents=[t], language=_DEFAULT_LANGUAGE)
+    resp = text_analytics_client.analyze_sentiment(documents=[t], language=_DEFAULT_LANGUAGE) # 呼叫azure
     doc = resp[0]
 
     totals = {"positive": 0.0, "neutral": 0.0, "negative": 0.0}

@@ -1,9 +1,8 @@
 """Data model definitions used across diary processing.
 
-包含 dataclass 與 TypedDict，用於統一各模組間交換的資料結構。
+統一使用 TypedDict，便於 JSON/dict 序列化與 DB 存取。
 """
 
-from dataclasses import dataclass
 from typing import List, Dict, Any, Optional, TypedDict
 
 
@@ -30,29 +29,25 @@ class DiaryRecord(TypedDict):  # 用來讀取DB內的值，並改成前端需要
     events: List[Dict[str, Any]]
 
 
-@dataclass
-class DiaryEntry:  
+class DiaryEntry(TypedDict, total=False):
     text: str
     meta: Dict[str, Any]
 
 
-@dataclass
-class SentenceResult:
+class SentenceResult(TypedDict, total=False):
     text: str
     label: str
     score: float
 
 
-@dataclass
-class EmotionResult:
+class EmotionResult(TypedDict, total=False):
     label: str
     score: float
-    sentences: Optional[List[Dict[str, Any]]] = None
+    sentences: Optional[List[Dict[str, Any]]]
 
 
-@dataclass
-class AnalysisResult:  # 基本上就是所有的azure回傳資料，很多巢狀，但是我覺得資料越多越好
+class AnalysisResult(TypedDict, total=False):
     entry: DiaryEntry
     emotion: EmotionResult
     symptoms: List[Dict[str, Any]]
-    extra: Dict[str, Any] = None
+    phi: Optional[Dict[str, Any]]

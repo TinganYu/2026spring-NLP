@@ -1,7 +1,6 @@
 import configparser
 import os
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict
 
 import requests
 
@@ -22,20 +21,18 @@ _AZURE_ENDPOINT = _get_setting("AZURE_LANGUAGE_ENDPOINT")
 _AZURE_LANGUAGE = _get_setting("AZURE_LANGUAGE_DEFAULT", "zh-Hant")
 
 
-@dataclass
-class PIIItem:
+class PIIItem(TypedDict, total=False):
     text: str
     category: str
     start: int
     end: int
-    confidence_score: Optional[float] = None
+    confidence_score: Optional[float]
 
 
-@dataclass
-class PIIReview:
+class PIIReview(TypedDict, total=False):
     needs_masking: bool
     entities: List[PIIItem]
-    redacted_text: Optional[str] = None
+    redacted_text: Optional[str]
 
 
 def review_pii(text: str, language: Optional[str] = None) -> PIIReview:
@@ -101,26 +98,24 @@ def review_pii(text: str, language: Optional[str] = None) -> PIIReview:
         parsed_entities = doc.get("entities", [])
         parsed_redacted_text = doc.get("redactedText", text)
 
-    # 這邊就是將結果轉換成我的data class而已
+    # 轉換成 dict 序列
     items: List[PIIItem] = []
     for e in parsed_entities:
         offset = int(e.get("offset", 0) or 0)
         length = int(e.get("length", 0) or 0)
-        items.append(
-            PIIItem(
-                text=e.get("text", ""),
-                category=e.get("category", "Unknown"),
-                start=offset,
-                end=offset + length,
-                confidence_score=e.get("confidenceScore"),
-            )
-        )
+        items.append({
+            "text": e.get("text", ""),
+            "category": e.get("category", "Unknown"),
+            "start": offset,
+            "end": offset + length,
+            "confidence_score": e.get("confidenceScore"),
+        })
 
-    return PIIReview(
-        needs_masking=len(items) > 0,
-        entities=items,
-        redacted_text=parsed_redacted_text,
-    )
+    return {
+        "needs_masking": len(items) > 0,
+        "entities": items,
+        "redacted_text": parsed_redacted_text,
+    }
 
 
 if __name__ == "__main__":

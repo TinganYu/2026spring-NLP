@@ -1,7 +1,6 @@
 import configparser
 import os
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict
 
 from azure.ai.textanalytics import HealthcareEntityRelation, TextAnalyticsClient
 from azure.core.credentials import AzureKeyCredential
@@ -27,51 +26,45 @@ _AZURE_KEY = _get_setting("AzureLanguage", "AZURE_LANGUAGE_KEY", "AZURE_LANGUAGE
 _AZURE_ENDPOINT = _get_setting("AzureLanguage", "AZURE_LANGUAGE_ENDPOINT", "AZURE_LANGUAGE_ENDPOINT")
 
 
-@dataclass
-class HealthEntitySource:
-    entity_id: Optional[str] = None
-    name: Optional[str] = None
+class HealthEntitySource(TypedDict, total=False):
+    entity_id: Optional[str]
+    name: Optional[str]
 
 
-@dataclass
-class HealthEntityAssertion:
-    conditionality: Optional[str] = None
-    certainty: Optional[str] = None
-    association: Optional[str] = None
+class HealthEntityAssertion(TypedDict, total=False):
+    conditionality: Optional[str]
+    certainty: Optional[str]
+    association: Optional[str]
 
 
-@dataclass
-class HealthEntityItem:
+class HealthEntityItem(TypedDict, total=False):
     text: str
     normalized_text: Optional[str]
     category: Optional[str]
     subcategory: Optional[str]
     offset: Optional[int]
     confidence_score: Optional[float]
-    data_sources: List[HealthEntitySource] = field(default_factory=list)
-    assertion: Optional[HealthEntityAssertion] = None
+    data_sources: List[HealthEntitySource]
+    assertion: Optional[HealthEntityAssertion]
 
 
-@dataclass
-class HealthRelationRole:
+class HealthRelationRole(TypedDict, total=False):
     name: Optional[str]
     entity_text: Optional[str]
 
 
-@dataclass
-class HealthRelationItem:
+class HealthRelationItem(TypedDict, total=False):
     relation_type: Optional[str]
-    roles: List[HealthRelationRole] = field(default_factory=list)
+    roles: List[HealthRelationRole]
 
 
-@dataclass
-class HealthAnalysisResult:
+class HealthAnalysisResult(TypedDict, total=False):
     original_text: str
     translated_text: str
     entities: List[HealthEntityItem]
     relations: List[HealthRelationItem]
-    translation: Optional[TranslationResult] = None
-    detected_language: Optional[str] = None
+    translation: Optional[TranslationResult]
+    detected_language: Optional[str]
 
 
 _client: Optional[TextAnalyticsClient] = None
@@ -99,49 +92,45 @@ def _to_entity_item(entity: Any) -> HealthEntityItem:
     data_sources = []
     if getattr(entity, "data_sources", None):
         for source in entity.data_sources:
-            data_sources.append(
-                HealthEntitySource(
-                    entity_id=getattr(source, "entity_id", None),
-                    name=getattr(source, "name", None),
-                )
-            )
+            data_sources.append({
+                "entity_id": getattr(source, "entity_id", None),
+                "name": getattr(source, "name", None),
+            })
 
     assertion = None
     if getattr(entity, "assertion", None) is not None:
-        assertion = HealthEntityAssertion(
-            conditionality=getattr(entity.assertion, "conditionality", None),
-            certainty=getattr(entity.assertion, "certainty", None),
-            association=getattr(entity.assertion, "association", None),
-        )
+        assertion = {
+            "conditionality": getattr(entity.assertion, "conditionality", None),
+            "certainty": getattr(entity.assertion, "certainty", None),
+            "association": getattr(entity.assertion, "association", None),
+        }
 
-    return HealthEntityItem(
-        text=getattr(entity, "text", ""),
-        normalized_text=getattr(entity, "normalized_text", None),
-        category=getattr(entity, "category", None),
-        subcategory=getattr(entity, "subcategory", None),
-        offset=getattr(entity, "offset", None),
-        confidence_score=getattr(entity, "confidence_score", None),
-        data_sources=data_sources,
-        assertion=assertion,
-    )
+    return {
+        "text": getattr(entity, "text", ""),
+        "normalized_text": getattr(entity, "normalized_text", None),
+        "category": getattr(entity, "category", None),
+        "subcategory": getattr(entity, "subcategory", None),
+        "offset": getattr(entity, "offset", None),
+        "confidence_score": getattr(entity, "confidence_score", None),
+        "data_sources": data_sources,
+        "assertion": assertion,
+    }
 
 
 def _to_relation_item(relation: Any) -> HealthRelationItem:
     # 把 Azure 的 relation 與 roles 轉成容易使用的格式
     roles = []
     for role in getattr(relation, "roles", []) or []:
-        roles.append(
-            HealthRelationRole(
-                name=getattr(role, "name", None),
-                entity_text=getattr(getattr(role, "entity", None), "text", None),
-            )
-        )
+        roles.append({
+            "name": getattr(role, "name", None),
+            "entity_text": getattr(getattr(role, "entity", None), "text", None),
+        })
 
     relation_type = getattr(relation, "relation_type", None)
     if relation_type is not None:
         relation_type = str(relation_type)
 
-    return HealthRelationItem(relation_type=relation_type, roles=roles)
+    return {"relation_type": relation_type, "roles": roles}
 
 
 def analyze_healthcare_entities(
@@ -169,14 +158,14 @@ def analyze_healthcare_entities(
     """
     if not text:
         # 空字串直接回傳空結果，避免多打 API
-        return HealthAnalysisResult(
-            original_text=text,
-            translated_text="",
-            entities=[],
-            relations=[],
-            translation=None,
-            detected_language=None,
-        )
+        return {
+            "original_text": text,
+            "translated_text": "",
+            "entities": [],
+            "relations": [],
+            "translation": None,
+            "detected_language": None,
+        }
 
     translation_result = None
     final_text = translated_text
@@ -188,7 +177,9 @@ def analyze_healthcare_entities(
             target_language=target_language,
             source_language=source_language,
         )
-        final_text = translation_result.translations[0].text if translation_result.translations else text
+        # translate_text now returns a dict
+        translations = translation_result.get("translations", [])
+        final_text = translations[0]["text"] if translations else text
     elif final_text is None:
         final_text = text
 
@@ -205,13 +196,13 @@ def analyze_healthcare_entities(
         error_docs = [doc for doc in result if doc.is_error]
         if error_docs:
             raise RuntimeError(f"Azure healthcare analysis failed: {error_docs[0].error.message}")
-        return HealthAnalysisResult(
-            original_text=text,
-            translated_text=final_text,
-            entities=[],
-            relations=[],
-            translation=translation_result,
-        )
+        return {
+            "original_text": text,
+            "translated_text": final_text,
+            "entities": [],
+            "relations": [],
+            "translation": translation_result,
+        }
 
     doc = docs[0]
     entities = [_to_entity_item(entity) for entity in getattr(doc, "entities", []) or []]
@@ -219,22 +210,22 @@ def analyze_healthcare_entities(
 
     detected_language = None
     if translation_result is not None:
-        detected_language = getattr(translation_result, "detected_language", None)
+        detected_language = translation_result.get("detected_language", None)
 
-    return HealthAnalysisResult(
-        original_text=text,
-        translated_text=final_text,
-        entities=entities,
-        relations=relations,
-        translation=translation_result,
-        detected_language=detected_language,
-    )
+    return {
+        "original_text": text,
+        "translated_text": final_text,
+        "entities": entities,
+        "relations": relations,
+        "translation": translation_result,
+        "detected_language": detected_language,
+    }
 
 
 if __name__ == "__main__":
     sample = "今天頭痛，醫生說要吃 ibuprofen 100mg twice daily。"
     output = analyze_healthcare_entities(sample, target_language="en")
-    print("original:", output.original_text)
-    print("translated:", output.translated_text)
-    print("entities:", [(item.text, item.category) for item in output.entities])
-    print("relations:", [(item.relation_type, [(r.name, r.entity_text) for r in item.roles]) for item in output.relations])
+    print("original:", output["original_text"])
+    print("translated:", output["translated_text"])
+    print("entities:", [(item["text"], item["category"]) for item in output.get("entities", [])])
+    print("relations:", [(item["relation_type"], [(r["name"], r["entity_text"]) for r in item.get("roles", [])]) for item in output.get("relations", [])])

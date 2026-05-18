@@ -1,6 +1,7 @@
 import sys
 import json
 from pathlib import Path
+import pytest
 
 # Ensure project root is importable when running this file directly.
 sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -10,11 +11,11 @@ from shared.pii import PIIItem, PIIReview
 
 
 def test_diary_pii_review_endpoint(monkeypatch):
-    review = PIIReview(
-        needs_masking=True,
-        entities=[PIIItem(text="0912-345-678", category="PhoneNumber", start=0, end=12, confidence_score=0.99)],
-        redacted_text="聯絡我 ************",
-    )
+    review = {
+        "needs_masking": True,
+        "entities": [{"text": "0912-345-678", "category": "PhoneNumber", "start": 0, "end": 12, "confidence_score": 0.99}],
+        "redacted_text": "聯絡我 ************",
+    }
     monkeypatch.setattr(app_module, "review_pii", lambda text: review)
 
     client = app_module.app.test_client()
@@ -27,8 +28,9 @@ def test_diary_pii_review_endpoint(monkeypatch):
     assert payload["redacted_text"] == "聯絡我 ************"
 
 
-def test_diary_process_real_output_and_remove_data_sources():
-
+@pytest.mark.integration  # 標記為整合測試 - 速度較慢
+def test_diary_process_real_output_and_remove_data_sources(mock_azure_apis):
+    """集成測試：驗證完整 API 流程（使用 conftest.py 的 mock）"""
     client = app_module.app.test_client()
     response = client.post(
         "/diary_process",
@@ -36,7 +38,7 @@ def test_diary_process_real_output_and_remove_data_sources():
     )
 
     payload = response.get_json()
-    print("\n=== REAL API OUTPUT ===")
+    print("\n=== API OUTPUT (mocked Azure) ===")
     print(json.dumps(payload, ensure_ascii=False, indent=2))
 
     assert response.status_code == 200, response.get_data(as_text=True)

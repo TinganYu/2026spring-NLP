@@ -50,7 +50,7 @@ def aggregate_weekly_records(records: List[AnalysisResult]) -> Dict[str, Any]:
     all_relations = []
     if phi_sources is not None:
         for record in phi_sources:
-            phi_summary = record.extra.get("phi", {})
+            phi_summary = getattr(record, "phi", {}) or {}
             for relation in phi_summary.get("relations", []):
                 all_relations.append(
                     {
