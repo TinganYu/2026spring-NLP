@@ -40,3 +40,10 @@ Groq 不應用於原始提取。
 - 月度評論摘要
 - 相關性解釋
 - 醫生就診準備摘要
+
+
+## 日記檔案說明
+1. `processor.py`：負責 per-entry 的處理（情緒偵測 + PHI），並把標準化結果放到 AnalysisResult.extra['phi'] 與 AnalysisResult.symptoms（單一症狀來源）。
+2. `analysis.py`：像 build_correlation_discovery、build_doctor_visit_prep 這類較詳細或耗時的 PHI 摘要保留為 on‑demand 呼叫（由後端在使用者請求時或 UI 按鈕觸發時執行），不會在每次 process 時同步產生。
+3. `aggregator.py`：負責從多筆 AnalysisResult 聚合週級資料，會呼叫  `visualization.py` 的函式產生前端直接可用的 chart payload（labels/series/ranking 等）。
+4. `visualization.py`：只把 canonical extra['phi'] 轉成圖表 payload；已移除把完整 relations 塞入 markers 的做法，前端收到的是精簡的繪圖欄位，不含原始 PHI blob。

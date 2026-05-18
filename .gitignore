@@ -2,3 +2,5 @@ config.ini
 **/__pycache__/
 *.py[cod]/
 .venv/
+.vscode/
+.pytest_cache/

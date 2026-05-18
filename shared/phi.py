@@ -71,6 +71,7 @@ class HealthAnalysisResult:
     entities: List[HealthEntityItem]
     relations: List[HealthRelationItem]
     translation: Optional[TranslationResult] = None
+    detected_language: Optional[str] = None
 
 
 _client: Optional[TextAnalyticsClient] = None
@@ -174,6 +175,7 @@ def analyze_healthcare_entities(
             entities=[],
             relations=[],
             translation=None,
+            detected_language=None,
         )
 
     translation_result = None
@@ -215,12 +217,17 @@ def analyze_healthcare_entities(
     entities = [_to_entity_item(entity) for entity in getattr(doc, "entities", []) or []]
     relations = [_to_relation_item(relation) for relation in getattr(doc, "entity_relations", []) or []]
 
+    detected_language = None
+    if translation_result is not None:
+        detected_language = getattr(translation_result, "detected_language", None)
+
     return HealthAnalysisResult(
         original_text=text,
         translated_text=final_text,
         entities=entities,
         relations=relations,
         translation=translation_result,
+        detected_language=detected_language,
     )
 
 

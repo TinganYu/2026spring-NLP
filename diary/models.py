@@ -1,5 +1,28 @@
 from dataclasses import dataclass
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, TypedDict
+
+
+class SymptomRecord(TypedDict):
+    key: str
+    display: str
+    status: str
+    severity: int
+
+
+class MedicationRecord(TypedDict):
+    key: str
+    display: str
+    frequency: str
+    inferred: bool
+
+
+class DiaryRecord(TypedDict):
+    date: str
+    emotion_label: str
+    emotion_score: float
+    symptoms: List[SymptomRecord]
+    medications: List[MedicationRecord]
+    events: List[Dict[str, Any]]
 
 
 @dataclass

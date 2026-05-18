@@ -44,7 +44,7 @@ def build_correlation_discovery(phi: Dict[str, Any], emotion_label: str = None) 
     categories = Counter(entity.get("category") for entity in entities if entity.get("category"))
 
     # 找出最重要的幾類資訊
-    symptom_or_sign = [entity for entity in entities if entity.get("category") == "SymptomOrSign"]
+    # 不在此回傳完整 symptom_or_sign，避免和 AnalysisResult.symptoms 重複
     medications = [entity for entity in entities if entity.get("category") == "MedicationName"]
 
     # 把有 assertion 的實體先整理出來，方便判斷是否要納入統計
@@ -66,7 +66,6 @@ def build_correlation_discovery(phi: Dict[str, Any], emotion_label: str = None) 
     return {
         "emotion_label": emotion_label,
         "category_counts": dict(categories),
-        "symptom_or_sign": symptom_or_sign,
         "medications": medications,
         "relation_facts": relation_facts,
         "assertions": assertions,
@@ -108,6 +107,7 @@ def build_doctor_visit_prep(phi: Dict[str, Any]) -> Dict[str, Any]:
             assertion_flags.append(_assertion_summary(entity))
 
     return {
+        # `symptom_or_sign` 在看診懶人包需要完整實體，保留此處輸出（on-demand）
         "symptom_or_sign": symptom_or_sign,
         "durations": durations,
         "qualifiers": qualifiers,

@@ -1,10 +1,9 @@
 from dataclasses import asdict
+from typing import Dict, Any, List
 
-from .models import DiaryEntry, AnalysisResult
+from .models import DiaryEntry, AnalysisResult, DiaryRecord, SymptomRecord, MedicationRecord
 from .emotion import detect_emotion
-from .analysis import build_correlation_discovery, build_doctor_visit_prep
 from shared.phi import analyze_healthcare_entities
-
 
 PHI_INTERESTING_CATEGORIES = {
     "SymptomOrSign",
@@ -28,25 +27,18 @@ def _summarize_phi(health_result):
     entities_by_category = {}
     for entity in entities:
         category = entity["category"] or "Unknown"
-        entities_by_category.setdefault(category, []).append(entity) # 按照 category 分類實體，方便後續分析和視覺化
+        entities_by_category.setdefault(category, []).append(entity)
 
-    important_entities = [ # 這邊是根據預定義的 PHI_INTERESTING_CATEGORIES 來篩選出重要的實體，這樣在後續的分析和視覺化中就可以專注於這些類別的實體，而不會被其他不太相關的實體干擾
+    important_entities = [
         entity
         for entity in entities
         if entity["category"] in PHI_INTERESTING_CATEGORIES
-    ]
-
-    symptom_or_sign = [
-        entity
-        for entity in entities
-        if entity["category"] == "SymptomOrSign"
     ]
 
     return {
         "input_text": health_result.original_text,
         "translated_text": health_result.translated_text,
         "translation": health_result.translation,
-        "symptom_or_sign": symptom_or_sign, # 特別把症狀和體徵整理出來，因為這是日記分析中最常關注的資訊之一
         "important_entities": important_entities,
         "entities_by_category": entities_by_category,
         "entities": entities,
@@ -54,32 +46,138 @@ def _summarize_phi(health_result):
     }
 
 
-# 不再把 Symptom 轉成 dataclass，直接使用 summarize_phi 內的 symptom_or_sign
-
 def process_entry(text: str, meta: dict = None) -> AnalysisResult:
-    """Orchestrator: receives a diary text and returns structured analysis.
-
-    The caller is responsible for any PII review or masking before invoking this.
-    """
+    """Orchestrator: receives a diary text and returns structured analysis."""
     processed_text = text
 
     entry = DiaryEntry(text=processed_text, meta=meta or {})
     emotion = detect_emotion(processed_text)
     phi_result = analyze_healthcare_entities(processed_text, target_language="en")
-    phi_summary = _summarize_phi(phi_result) #轉成 json 格式，並加入自己的整理的東西(不確定是否需要，可能看之後視覺化要怎麼做再調整)
-    # 保持 symptoms 為 summarize_phi 的原始清單（list of dict）
-    symptoms = phi_summary.get("symptom_or_sign", [])
+    phi_summary = _summarize_phi(phi_result)
     
+    symptoms = [
+        entity for entity in phi_summary.get("entities", []) if entity.get("category") == "SymptomOrSign"
+    ]
+
     return AnalysisResult(
         entry=entry,
         emotion=emotion,
         symptoms=symptoms,
         extra={
             "phi": phi_summary,
-            "analysis": { #這只是我暫時對phi裡面的資料作處理，但是之後可能會再改
-                "correlation_discovery": build_correlation_discovery(phi_summary, emotion_label=emotion.label),
-                "doctor_visit_prep": build_doctor_visit_prep(phi_summary),
-            },
         },
     )
 
+
+def _format_event_text(relation_type: str, roles: Dict[str, str]) -> str:
+    """將關聯事件格式化為可讀的中文句子"""
+    if relation_type == "TimeOfCondition":
+        return f"{roles.get('Condition') or roles.get('Symptom') or '某個症狀'} 發生在 {roles.get('Time') or roles.get('Date') or '某個時間'}"
+    if relation_type == "DurationOfCondition":
+        return f"{roles.get('Condition') or roles.get('Symptom') or '某個症狀'} 持續 {roles.get('Duration') or '某段時間'}"
+    if relation_type == "DosageOfMedication":
+        return f"{roles.get('Medication') or roles.get('Drug') or '某個藥物'} 的劑量是 {roles.get('Dosage') or '某個劑量'}"
+    if relation_type == "FrequencyOfMedication":
+        return f"{roles.get('Medication') or roles.get('Drug') or '某個藥物'} 的服用頻率是 {roles.get('Frequency') or '某個頻率'}"
+    if relation_type == "TimeOfMedication":
+        return f"在 {roles.get('Time') or '某個時間'} 服用 {roles.get('Medication') or '某個藥物'}"
+    if relation_type == "QualifierOfCondition":
+        return f"{roles.get('Condition') or roles.get('Symptom') or '某個症狀'} 的程度/狀態是 {roles.get('Qualifier') or '某種狀態'}"
+    if relation_type == "BodySiteOfCondition":
+        return f"{roles.get('Condition') or roles.get('Symptom') or '某個症狀'} 發生在 {roles.get('BodySite') or '某個部位'}"
+    
+    return f"{relation_type}: {', '.join(f'{k}={v}' for k, v in roles.items())}"
+
+
+def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
+    """將 AnalysisResult 轉換為前端與圖表直接可用的統一 DiaryRecord 結構"""
+    phi = result.extra.get("phi", {})
+    entities = phi.get("entities", [])
+    relations = phi.get("relations", [])
+    
+    # 解析 relations 備用
+    parsed_relations = []
+    for rel in relations:
+        roles = {r.get("name") or "Unknown": r.get("entity_text") or "" for r in rel.get("roles", [])}
+        parsed_relations.append({
+            "type": rel.get("relation_type"),
+            "roles": roles
+        })
+
+    # 1. 整理 Symptoms
+    symptom_records = []
+    for ent in entities:
+        if ent.get("category") == "SymptomOrSign":
+            key = ent.get("normalized_text") or ent.get("text") or ""
+            display = ent.get("text") or ""
+            
+            # 判斷 status
+            status = "affirmed"
+            assertion = ent.get("assertion")
+            if assertion:
+                cert = assertion.get("certainty")
+                cond = assertion.get("conditionality")
+                temp = assertion.get("temporal")
+                assoc = assertion.get("association")
+                
+                if cert in ("negative", "negative_possible"): status = "negated"
+                elif cond in ("hypothetical", "conditional"): status = "hypothetical"
+                elif temp == "past": status = "historical"
+                elif temp == "future": status = "hypothetical"
+                elif assoc == "other": status = "other_person"
+                elif cert in ("positive_possible", "neutral_possible"): status = "uncertain"
+
+            # 判斷 severity (1-3)
+            severity = 1
+            for pr in parsed_relations:
+                if pr["type"] == "QualifierOfCondition":
+                    cond_text = pr["roles"].get("Condition") or pr["roles"].get("Symptom")
+                    if cond_text == display:
+                        qualifier = pr["roles"].get("Qualifier", "")
+                        if any(k in qualifier for k in ["嚴重", "重度", "劇烈", "3"]): severity = 3
+                        elif any(k in qualifier for k in ["中度", "2"]): severity = 2
+                        elif any(k in qualifier for k in ["輕微", "1"]): severity = 1
+
+            symptom_records.append(SymptomRecord(key=key, display=display, status=status, severity=severity))
+
+    # 2. 整理 Medications
+    medication_records = []
+    for ent in entities:
+        if ent.get("category") == "MedicationName":
+            key = ent.get("normalized_text") or ent.get("text") or ""
+            display = ent.get("text") or ""
+            frequency = ""
+            
+            for pr in parsed_relations:
+                if pr["type"] == "FrequencyOfMedication":
+                    med_text = pr["roles"].get("Medication") or pr["roles"].get("Drug")
+                    if med_text == display:
+                        frequency = pr["roles"].get("Frequency", "")
+                        break
+            
+            medication_records.append(MedicationRecord(
+                key=key, display=display, frequency=frequency, inferred=False
+            ))
+
+    # 3. 整理 Events
+    target_event_types = {
+        "QualifierOfCondition", "TimeOfCondition", "DurationOfCondition",
+        "DosageOfMedication", "FrequencyOfMedication", "TimeOfMedication", "BodySiteOfCondition"
+    }
+    events = []
+    for pr in parsed_relations:
+        if pr["type"] in target_event_types:
+            events.append({
+                "type": pr["type"],
+                "roles": pr["roles"],
+                "text": _format_event_text(pr["type"], pr["roles"])
+            })
+
+    return DiaryRecord(
+        date=date,
+        emotion_label=result.emotion.label,
+        emotion_score=result.emotion.score,
+        symptoms=symptom_records,
+        medications=medication_records,
+        events=events
+    )
