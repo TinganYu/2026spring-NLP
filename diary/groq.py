@@ -1,3 +1,8 @@
+"""Convert structured weekly health data into a natural-language summary using Groq.
+
+負責將趨勢 JSON 包裝成 prompt 並呼叫 Groq 的 chat/completions API。
+"""
+
 import configparser
 import json
 import os

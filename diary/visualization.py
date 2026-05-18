@@ -1,3 +1,8 @@
+"""將已整理好的分析資料轉成前端圖表 payload（labels/series/markers/ranking）。
+
+此模組只負責格式化與統計的視覺化輸出，不直接執行 NLP/PHI 分析。
+"""
+
 from collections import Counter, defaultdict
 from typing import Dict, List, Any
 from datetime import datetime
@@ -181,7 +186,7 @@ def build_symptom_severity_chart(records: List[DiaryRecord]) -> Dict[str, Any]:
     sorted_records = _sort_records_by_date(records)
     labels = [r["date"] for r in sorted_records]
     
-    # 找出哪些症狀有 > 1 的 severity
+    # 找出哪些症狀有 > 0 的 severity
     severity_map = defaultdict(lambda: [None] * len(sorted_records))
     display_map = {}
     valid_keys = set()
@@ -191,7 +196,7 @@ def build_symptom_severity_chart(records: List[DiaryRecord]) -> Dict[str, Any]:
             k = sym["key"] or sym["display"]
             display_map[k] = sym["display"]
             severity_map[k][i] = sym["severity"]
-            if sym["severity"] > 1:
+            if sym["severity"] > 0:
                 valid_keys.add(k)
 
     series = []

@@ -14,6 +14,8 @@ from flask import Flask, request, abort, render_template, url_for, Blueprint, js
 from diary.processor import process_entry
 from shared.pii import review_pii
 import website.database as db
+from diary.aggregator import aggregate_weekly_records
+from diary.models import AnalysisResult, DiaryEntry, EmotionResult 
 
 # Config Parser
 config = configparser.ConfigParser()
@@ -39,6 +41,40 @@ def _remove_data_sources(obj): # 因為PHI提供的data sources 實在是太多�
 #     # 從數據庫取得完整的entity數據(尤其是data sources)
 #     # 之後建好再加入程式
 #     pass
+
+@app.route("/api/weekly_dashboard", methods=["GET"])
+def get_weekly_dashboard():
+    user_id = request.args.get("user_id") # 或是從 session 拿
+    # 這裡可以讓前端傳日期，或是後端自動推算過去 7 天
+    start_date = request.args.get("start_date") 
+    end_date = request.args.get("end_date")
+    
+    # 1. 從 MongoDB 撈出這段時間的日記 (這部分要看你們 db.py 的實作)
+    # 假設 db.get_diaries_by_range 回傳的是一個 dict 列表
+    raw_db_records = db.get_diaries_by_range(user_id, start_date, end_date)
+    
+    # 2. 將 DB 資料還原成 aggregator 認得的 AnalysisResult 物件列表
+    analysis_records = []
+    for doc in raw_db_records:
+        # 從你當初存進 Mongo 的結構中把資料拿出來組裝 (這段是AI亂寫的，反正之後看DB怎麼存再改)
+        entry = DiaryEntry(text=doc["text"], meta={"date": doc["date"]})
+        emotion = EmotionResult(label=doc["emotion_label"], score=doc["emotion_score"])
+        # 原始的 phi 結構存在 doc["raw_analysis"]["phi"]
+        phi_data = doc.get("raw_analysis", {}).get("phi", {})
+        # 組裝成 AnalysisResult
+        record = AnalysisResult(
+            entry=entry,
+            emotion=emotion,
+            symptoms=[], # 轉成 DiaryRecord 時主要是看 extra["phi"]，這裡維持空 list 即可
+            extra={"phi": phi_data}
+        )
+        analysis_records.append(record)
+        
+    # 3. 呼叫聚合器，直接生成所有圖表
+    dashboard_payload = aggregate_weekly_records(analysis_records)
+    
+    # 4. 回傳給前端，前端接去畫圖即可
+    return jsonify(dashboard_payload)
 
 @app.route("/diary_process", methods=["POST"])  #接收前端送來的日記內容，並回傳分析結果
 def process_diary():

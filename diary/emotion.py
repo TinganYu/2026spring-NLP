@@ -1,4 +1,9 @@
 
+"""Emotion detection utilities.
+
+封裝對 Azure Text Analytics 的呼叫以產生 `EmotionResult`。
+"""
+
 import os
 from .models import EmotionResult
 from azure.core.credentials import AzureKeyCredential

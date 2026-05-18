@@ -1,3 +1,7 @@
+"""示範用的 CLI/runner：模擬使用者輸入並顯示 `process_entry` 的輸出。
+
+供本地快速驗證處理流程與輸出格式使用。
+"""
 # 這是一個簡單的示範程式，模擬使用者輸入日記內容並將其傳遞給處理器，最後以 JSON 格式輸出結果。
 import json
 from dataclasses import asdict
