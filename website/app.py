@@ -97,7 +97,7 @@ def diary_pii_review():
 @app.route("/")  #一打開網站要做的事情
 def home():
     db.connect()
-    return render_template("index.html")
+    return render_template("diary.html")
 
 if __name__ == "__main__":
     app.run()
