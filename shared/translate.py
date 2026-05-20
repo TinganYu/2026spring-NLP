@@ -1,7 +1,6 @@
 import configparser
 import os
-from dataclasses import dataclass
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional, Sequence, Union, TypedDict
 
 from azure.ai.translation.text import TextTranslationClient
 from azure.core.credentials import AzureKeyCredential
@@ -26,14 +25,13 @@ _AZURE_TRANSLATOR_ENDPOINT = _get_setting("AzureTranslator", "Endpoint", "AZURE_
 _AZURE_TRANSLATOR_REGION = _get_setting("AzureTranslator", "Region", "AZURE_TRANSLATOR_REGION")
 
 
-@dataclass
-class TranslationItem:
+class TranslationItem(TypedDict, total=False):
     text: str
     to: str
+    alignment: Optional[str]
 
 
-@dataclass
-class TranslationResult:
+class TranslationResult(TypedDict, total=False):
     source_text: str
     detected_language: Optional[str]
     translations: List[TranslationItem]
@@ -89,7 +87,7 @@ def translate_text(
         Optional source language. If omitted, Azure can auto-detect.
     """
     if not text:
-        return TranslationResult(source_text=text, detected_language=None, translations=[])
+        return {"source_text": text, "detected_language": None, "translations": []}
 
     client = _get_client()
     targets = [target_language] if isinstance(target_language, str) else list(target_language)
@@ -106,32 +104,80 @@ def translate_text(
             body=body,
             to_language=targets,
             from_language=inferred_source_language,
+            include_alignment=True # 請求 Azure 回傳字元對齊矩陣，
         )
     except HttpResponseError as exc:
         raise RuntimeError(f"Azure 翻譯失敗: {exc}") from exc
 
     if not response:
-        return TranslationResult(source_text=text, detected_language=None, translations=[])
+        return {"source_text": text, "detected_language": None, "translations": []}
 
     first_item = response[0]
     detected_language = getattr(getattr(first_item, "detected_language", None), "language", None)
-    translations = [TranslationItem(text=translation.text, to=translation.to) for translation in first_item.translations]
+    translations = [{"text": translation.text, "to": translation.to} for translation in first_item.translations]
 
-    return TranslationResult(
-        source_text=text,
-        detected_language=detected_language,
-        translations=translations,
-    )
+    translations = []
+    for translation in first_item.translations:
+        # 抓取對齊矩陣 (格式會像是 "0:1-0:4 2:3-5:9")
+        align_obj = getattr(translation, "alignment", None)
+        proj_str = getattr(align_obj, "proj", None) if align_obj else None
+        
+        translations.append({
+            "text": translation.text, 
+            "to": translation.to,
+            "alignment": proj_str  # ✅ 把對齊字串存起來
+        })
 
+    return {
+        "source_text": text,
+        "detected_language": detected_language,
+        "translations": translations,
+    }
+
+
+def _get_original_text_from_alignment(
+    original_text: str, 
+    alignment_proj: str, 
+    target_offset: int, 
+    target_length: int
+) -> str:
+    """透過 Azure Translator 的 Alignment 矩陣，將英文實體的位置反推回中文原文。"""
+    if not alignment_proj or target_offset is None or target_length is None:
+        return ""
+    
+    target_start = target_offset
+    target_end = target_offset + target_length - 1
+    
+    min_src_start = float('inf')
+    max_src_end = -1
+    
+    pairs = alignment_proj.split(' ')
+    for pair in pairs:
+        if '-' not in pair: 
+            continue
+        src_part, tgt_part = pair.split('-')
+        s_start, s_end = map(int, src_part.split(':'))
+        t_start, t_end = map(int, tgt_part.split(':'))
+        
+        # 檢查英文翻譯片段，跟 Azure Health 抓到的英文實體位置是否有重疊
+        if t_start <= target_end and t_end >= target_start:
+            min_src_start = min(min_src_start, s_start)
+            max_src_end = max(max_src_end, s_end)
+            
+    if min_src_start != float('inf') and max_src_end != -1:
+        return original_text[min_src_start:max_src_end + 1]
+        
+    return ""
 
 # ============= Convenience function for common use case =============
 # 只回傳第一個翻譯結果的文本，適合大多數只需要單一翻譯的情況。
 def translate_to(text: str, target_language: str, source_language: Optional[str] = None) -> str:
     """Translate text and return the first translated string for the requested target language."""
     result = translate_text(text, target_language=target_language, source_language=source_language)
-    if not result.translations:
+    # result is now a dict
+    if not result.get("translations"):
         return text
-    return result.translations[0].text
+    return result["translations"][0]["text"]
 
 
 if __name__ == "__main__":
@@ -139,7 +185,8 @@ if __name__ == "__main__":
     target_language = input("請輸入目標語言（例如 en、zh-Hant、vi、id）: ").strip() or "en"
     result = translate_text(sample_text, target_language=target_language)
 
-    print("原文：", result.source_text)
-    print("偵測語言：", result.detected_language)
-    for item in result.translations:
-        print(f"翻譯 ({item.to})：{item.text}")
+    # result is now a dict
+    print("原文：", result["source_text"])
+    print("偵測語言：", result["detected_language"])
+    for item in result["translations"]:
+        print(f"翻譯 ({item['to']})：{item['text']}")

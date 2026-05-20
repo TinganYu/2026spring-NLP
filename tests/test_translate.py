@@ -24,13 +24,13 @@ class _FakeResponseItem:
 class _FakeClient:
     def __init__(self):
         self.calls = []
-
-    def translate(self, body, to_language, from_language=None):
+    def translate(self, body, to_language=None, from_language=None, **kwargs):
         self.calls.append(
             {
                 "body": body,
                 "to_language": to_language,
                 "from_language": from_language,
+                "extra": kwargs,
             }
         )
         return [_FakeResponseItem()]
@@ -42,8 +42,9 @@ def test_translate_text_uses_target_language(monkeypatch):
 
     result = translate.translate_text("你好", target_language="en")
 
-    assert result.detected_language == "zh-Hant"
-    assert [item.to for item in result.translations] == ["en", "zh-Hant"]
+    # result is now a dict (TypedDict)
+    assert result["detected_language"] == "zh-Hant"
+    assert [item["to"] for item in result["translations"]] == ["en", "zh-Hant"]
     assert fake_client.calls[0]["to_language"] == ["en"]
     assert fake_client.calls[0]["from_language"] == "zh-Hant"
 

@@ -4,38 +4,25 @@ import diary.visualization as viz
 SAMPLE_RECORDS = [
     {
         "date": "2026-05-01",
-        "sentiment_label": "negative",
-        "sentiment_score": 0.2,
-        "extra": {
-            "phi": {
-                "entities": [
-                    {"text": "headache", "category": "SymptomOrSign"},
-                    {"text": "ibuprofen", "category": "MedicationName"},
-                ],
-                "relations": [
-                    {
-                        "relation_type": "TimeOfCondition",
-                        "roles": [
-                            {"name": "Condition", "entity_text": "headache"},
-                            {"name": "Time", "entity_text": "today"},
-                        ],
-                    }
-                ],
-            }
-        },
+        "emotion_label": "negative",
+        "emotion_score": 0.2,
+        "symptoms": [
+            {"key": "headache", "display": "headache", "status": "affirmed", "severity": 2},
+        ],
+        "medications": [
+            {"key": "ibuprofen", "display": "ibuprofen", "frequency": "", "inferred": False},
+        ],
+        "events": [],
     },
     {
         "date": "2026-05-02",
-        "sentiment_label": "neutral",
-        "sentiment_score": 0.6,
-        "extra": {
-            "phi": {
-                "entities": [
-                    {"text": "insomnia", "category": "SymptomOrSign"},
-                ],
-                "relations": [],
-            }
-        },
+        "emotion_label": "neutral",
+        "emotion_score": 0.6,
+        "symptoms": [
+            {"key": "insomnia", "display": "insomnia", "status": "affirmed", "severity": 1},
+        ],
+        "medications": [],
+        "events": [],
     },
 ]
 
@@ -75,4 +62,9 @@ def test_build_dashboard_payload():
         "symptom_frequency_chart",
         "medication_frequency_chart",
         "cooccurrence_chart",
+        "symptom_timeline",
+        "symptom_severity_chart",
+        "medication_timeline",
+        "emotion_heatmap_calendar",
+        "cooccurrence_heatmap",
     }
