@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, TypedDict
 from azure.ai.textanalytics import HealthcareEntityRelation, TextAnalyticsClient
 from azure.core.credentials import AzureKeyCredential
 
-from shared.translate import TranslationResult, translate_text, _get_original_text_from_alignment
+from shared.translate import TranslationResult, translate_text
 
 
 config = configparser.ConfigParser()
@@ -112,7 +112,7 @@ def _to_entity_item(entity: Any) -> HealthEntityItem:
         "subcategory": getattr(entity, "subcategory", None),
         "offset": getattr(entity, "offset", None),
         "confidence_score": getattr(entity, "confidence_score", None),
-        "data_sources": data_sources,
+        "data_sources": data_sources, # 這是各種醫療專屬編號(到時候可能沒用就刪了)
         "assertion": assertion,
     }
 
@@ -126,13 +126,14 @@ def _to_relation_item(relation: Any) -> HealthRelationItem:
             "entity_text": getattr(getattr(role, "entity", None), "text", None),
         })
 
-    relation_type = getattr(relation, "relation_type", None)
+    relation_type = getattr(relation, "relation_type", None) # 例如"Dosage"、"frequency"之類的關係類型
     if relation_type is not None:
         relation_type = str(relation_type)
 
     return {"relation_type": relation_type, "roles": roles}
 
 
+# Azure healthcare analysis 只吃英文，因此要丟翻譯後的文字
 def analyze_healthcare_entities(
     text: str,
     target_language: str = "en",
@@ -171,7 +172,7 @@ def analyze_healthcare_entities(
     final_text = translated_text
 
     if final_text is None and include_translation:
-        # 如果外面沒有先翻譯，這裡只翻一次
+        # 如果外面沒有先翻譯過，這裡先翻一次
         translation_result = translate_text(
             text,
             target_language=target_language,
@@ -184,7 +185,6 @@ def analyze_healthcare_entities(
         final_text = text
 
     client = _get_client()
-    # Azure healthcare analysis 只吃英文，因此要丟翻譯後的文字
     #Azure 醫療分析屬於複雜運算，採用的是「長時間執行作業 (Long-Running Operation, LRO)」。程式會先拿到一個 poller（輪詢器），然後用 .result() 等待 Azure 慢慢把結果算完傳回來。
 
     poller = client.begin_analyze_healthcare_entities([final_text], language=target_language)
@@ -208,23 +208,7 @@ def analyze_healthcare_entities(
     entities = [_to_entity_item(entity) for entity in getattr(doc, "entities", []) or []]
     relations = [_to_relation_item(relation) for relation in getattr(doc, "entity_relations", []) or []]
     
-    # 嘗試用翻譯對齊矩陣把英文實體位置反推回中文原文，存到 name_zh 欄位
-    translations_list = translation_result.get("translations", []) if translation_result else []
-    alignment_proj = translations_list[0].get("alignment") if translations_list else None
-    for ent in entities:
-        if ent.get("category") in {"SymptomOrSign", "MedicationName"}:
-            offset = ent.get("offset")
-            length = len(ent.get("text", ""))
-            
-            # 查表反推最原始的中文字
-            original_zh = _get_original_text_from_alignment(
-                original_text=text,
-                alignment_proj=alignment_proj,
-                target_offset=offset,
-                target_length=length
-            )
-            # 存入字典中，這樣存進 DB 的時候就會自帶中文
-            ent["name_zh"] = original_zh if original_zh else ent.get("text")
+    # 不再嘗試用翻譯對齊矩陣回推中文原文，前端將負責顯示翻譯內容
 
     detected_language = None
     if translation_result is not None:
@@ -241,7 +225,7 @@ def analyze_healthcare_entities(
 
 
 if __name__ == "__main__":
-    sample = "今天頭痛，醫生說要吃 ibuprofen 100mg twice daily。"
+    sample = "我有頭痛，醫生叫我吃布洛芬，每天三次，每次兩顆，連續吃五天。"
     output = analyze_healthcare_entities(sample, target_language="en")
     print("original:", output["original_text"])
     print("translated:", output["translated_text"])

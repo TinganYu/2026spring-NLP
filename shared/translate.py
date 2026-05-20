@@ -28,7 +28,7 @@ _AZURE_TRANSLATOR_REGION = _get_setting("AzureTranslator", "Region", "AZURE_TRAN
 class TranslationItem(TypedDict, total=False):
     text: str
     to: str
-    alignment: Optional[str]
+    # alignment 已移除，前端/上層負責處理對齊需求
 
 
 class TranslationResult(TypedDict, total=False):
@@ -104,7 +104,6 @@ def translate_text(
             body=body,
             to_language=targets,
             from_language=inferred_source_language,
-            include_alignment=True # 請求 Azure 回傳字元對齊矩陣，
         )
     except HttpResponseError as exc:
         raise RuntimeError(f"Azure 翻譯失敗: {exc}") from exc
@@ -116,18 +115,6 @@ def translate_text(
     detected_language = getattr(getattr(first_item, "detected_language", None), "language", None)
     translations = [{"text": translation.text, "to": translation.to} for translation in first_item.translations]
 
-    translations = []
-    for translation in first_item.translations:
-        # 抓取對齊矩陣 (格式會像是 "0:1-0:4 2:3-5:9")
-        align_obj = getattr(translation, "alignment", None)
-        proj_str = getattr(align_obj, "proj", None) if align_obj else None
-        
-        translations.append({
-            "text": translation.text, 
-            "to": translation.to,
-            "alignment": proj_str  # ✅ 把對齊字串存起來
-        })
-
     return {
         "source_text": text,
         "detected_language": detected_language,
@@ -135,39 +122,7 @@ def translate_text(
     }
 
 
-def _get_original_text_from_alignment(
-    original_text: str, 
-    alignment_proj: str, 
-    target_offset: int, 
-    target_length: int
-) -> str:
-    """透過 Azure Translator 的 Alignment 矩陣，將英文實體的位置反推回中文原文。"""
-    if not alignment_proj or target_offset is None or target_length is None:
-        return ""
-    
-    target_start = target_offset
-    target_end = target_offset + target_length - 1
-    
-    min_src_start = float('inf')
-    max_src_end = -1
-    
-    pairs = alignment_proj.split(' ')
-    for pair in pairs:
-        if '-' not in pair: 
-            continue
-        src_part, tgt_part = pair.split('-')
-        s_start, s_end = map(int, src_part.split(':'))
-        t_start, t_end = map(int, tgt_part.split(':'))
-        
-        # 檢查英文翻譯片段，跟 Azure Health 抓到的英文實體位置是否有重疊
-        if t_start <= target_end and t_end >= target_start:
-            min_src_start = min(min_src_start, s_start)
-            max_src_end = max(max_src_end, s_end)
-            
-    if min_src_start != float('inf') and max_src_end != -1:
-        return original_text[min_src_start:max_src_end + 1]
-        
-    return ""
+# `_get_original_text_from_alignment` 已移除 — 翻譯對齊功能改由前端處理
 
 # ============= Convenience function for common use case =============
 # 只回傳第一個翻譯結果的文本，適合大多數只需要單一翻譯的情況。
