@@ -1,6 +1,6 @@
 import configparser
 import os
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, List, Optional, TypedDict
 
 from azure.ai.textanalytics import HealthcareEntityRelation, TextAnalyticsClient
 from azure.core.credentials import AzureKeyCredential
@@ -26,17 +26,6 @@ _AZURE_KEY = _get_setting("AzureLanguage", "AZURE_LANGUAGE_KEY", "AZURE_LANGUAGE
 _AZURE_ENDPOINT = _get_setting("AzureLanguage", "AZURE_LANGUAGE_ENDPOINT", "AZURE_LANGUAGE_ENDPOINT")
 
 
-class HealthEntitySource(TypedDict, total=False):
-    entity_id: Optional[str]
-    name: Optional[str]
-
-
-class HealthEntityAssertion(TypedDict, total=False):
-    conditionality: Optional[str]
-    certainty: Optional[str]
-    association: Optional[str]
-
-
 class HealthEntityItem(TypedDict, total=False):
     text: str
     normalized_text: Optional[str]
@@ -44,19 +33,12 @@ class HealthEntityItem(TypedDict, total=False):
     subcategory: Optional[str]
     offset: Optional[int]
     confidence_score: Optional[float]
-    data_sources: List[HealthEntitySource]
-    assertion: Optional[HealthEntityAssertion]
-
-
-class HealthRelationRole(TypedDict, total=False):
-    name: Optional[str]
-    entity_text: Optional[str]
-
+    data_sources: List[dict]
+    assertion: Optional[dict]
 
 class HealthRelationItem(TypedDict, total=False):
     relation_type: Optional[str]
-    roles: List[HealthRelationRole]
-
+    roles: List[dict]
 
 class HealthAnalysisResult(TypedDict, total=False):
     original_text: str
@@ -65,7 +47,6 @@ class HealthAnalysisResult(TypedDict, total=False):
     relations: List[HealthRelationItem]
     translation: Optional[TranslationResult]
     detected_language: Optional[str]
-
 
 _client: Optional[TextAnalyticsClient] = None
 
@@ -86,51 +67,43 @@ def _get_client() -> TextAnalyticsClient:
     )
     return _client
 
-
 def _to_entity_item(entity: Any) -> HealthEntityItem:
-    # 把 Azure 回傳的 entity 轉成我們自己定義的資料結構
-    data_sources = []
-    if getattr(entity, "data_sources", None):
-        for source in entity.data_sources:
-            data_sources.append({
-                "entity_id": getattr(source, "entity_id", None),
-                "name": getattr(source, "name", None),
-            })
-
+    """將 Azure HealthcareEntity 物件轉換為字典"""
+    data_sources = [
+        {"entity_id": src.entity_id, "name": src.name}
+        for src in (entity.data_sources or [])
+    ]
     assertion = None
-    if getattr(entity, "assertion", None) is not None:
+    if entity.assertion:
         assertion = {
-            "conditionality": getattr(entity.assertion, "conditionality", None),
-            "certainty": getattr(entity.assertion, "certainty", None),
-            "association": getattr(entity.assertion, "association", None),
+            "conditionality": entity.assertion.conditionality,
+            "certainty": entity.assertion.certainty,
+            "association": entity.assertion.association,
         }
-
     return {
-        "text": getattr(entity, "text", ""),
-        "normalized_text": getattr(entity, "normalized_text", None),
-        "category": getattr(entity, "category", None),
-        "subcategory": getattr(entity, "subcategory", None),
-        "offset": getattr(entity, "offset", None),
-        "confidence_score": getattr(entity, "confidence_score", None),
-        "data_sources": data_sources, # 這是各種醫療專屬編號(到時候可能沒用就刪了)
+        "text": entity.text or "",
+        "normalized_text": entity.normalized_text,
+        "category": entity.category,
+        "subcategory": entity.subcategory,
+        "offset": entity.offset,
+        "confidence_score": entity.confidence_score,
+        "data_sources": data_sources,# 這是各種醫療專屬編號(到時候可能沒用就刪了)
         "assertion": assertion,
     }
 
-
 def _to_relation_item(relation: Any) -> HealthRelationItem:
-    # 把 Azure 的 relation 與 roles 轉成容易使用的格式
-    roles = []
-    for role in getattr(relation, "roles", []) or []:
-        roles.append({
-            "name": getattr(role, "name", None),
-            "entity_text": getattr(getattr(role, "entity", None), "text", None),
-        })
-
-    relation_type = getattr(relation, "relation_type", None) # 例如"Dosage"、"frequency"之類的關係類型
-    if relation_type is not None:
-        relation_type = str(relation_type)
-
-    return {"relation_type": relation_type, "roles": roles}
+    """將 Azure HealthcareRelation 物件轉換為字典"""
+    roles = [
+        {
+            "name": role.name,
+            "entity_text": role.entity.text if role.entity else None,
+        }
+        for role in (relation.roles or [])
+    ]
+    return {
+        "relation_type": str(relation.relation_type) if relation.relation_type else None,
+        "roles": roles,
+    }
 
 
 # Azure healthcare analysis 只吃英文，因此要丟翻譯後的文字
@@ -205,10 +178,9 @@ def analyze_healthcare_entities(
         }
 
     doc = docs[0]
-    entities = [_to_entity_item(entity) for entity in getattr(doc, "entities", []) or []]
-    relations = [_to_relation_item(relation) for relation in getattr(doc, "entity_relations", []) or []]
     
-    # 不再嘗試用翻譯對齊矩陣回推中文原文，前端將負責顯示翻譯內容
+    entities = [_to_entity_item(entity) for entity in (getattr(doc, "entities", []) or [])]
+    relations = [_to_relation_item(relation) for relation in (getattr(doc, "entity_relations", []) or [])]
 
     detected_language = None
     if translation_result is not None:

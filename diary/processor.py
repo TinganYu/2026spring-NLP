@@ -61,7 +61,6 @@ def process_entry(text: str, meta: dict = None) -> AnalysisResult:
     emotion = detect_emotion(processed_text)
     phi_result = analyze_healthcare_entities(processed_text, target_language="en")
 
-    # 症狀維持 list[dict]，方便下游泾用既有制式
     entities = phi_result.get("entities", [])
     symptoms = [
         entity for entity in entities if entity.get("category") == "SymptomOrSign"
