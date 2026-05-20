@@ -1,0 +1,7 @@
+azure-cognitiveservices-speech
+requests
+uuid
+configparser
+azure-ai-translation-text
+azure-ai-textanalytics==5.2.0
+streamlit
