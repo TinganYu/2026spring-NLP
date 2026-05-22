@@ -1,0 +1,95 @@
+/* 行列們 */
+.column {
+    display: flex;
+    flex-direction: column;
+}
+
+.row {
+    display: flex;
+    width: 100%;
+}
+
+#top-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 10;
+
+    height: 10vh;
+    background-color: #0F172A;
+}
+
+.float-row {
+    border: 1px solid #E4EAEF;
+    border-radius: 5px;
+
+    background-color: #f8f8f8;
+    padding: 10px;
+}
+
+#main .column {
+    position: absolute;
+    top: 10%;
+    height: 90vh;
+
+    padding: 10px;
+}
+
+/* tab 跟 button 系列 */
+.tab {
+    border: none;
+    border-radius: 5px;
+    background-color: #1E293B;
+
+    font-size: 16px;
+    color: #8D9CB0;
+
+    cursor: pointer;
+}
+
+.btn {
+    border: 2px solid #E4EAEF;
+    border-radius: 5px;
+    font-size: 16px;
+    color: #64748B;
+    cursor: pointer;
+}
+
+.language-btn {
+    border-radius: 10px;
+}
+
+.select {
+    border: none;
+    background-color: #0D9488;
+    color: white;
+}
+
+.diary-btn {
+    border: none;
+    background-color: #F59E0B;
+    color: white;
+}
+
+/* 其他 */
+#upload-mp3 {
+    width: 95%;
+}
+
+#message {
+    box-sizing: border-box;
+
+    border: 2px solid #E4EAEF;
+    border-radius: 5px;
+
+    background-color: #f8f8f8;
+    font-size: 18px;
+
+    width: 95%;
+    resize: none;
+}
+

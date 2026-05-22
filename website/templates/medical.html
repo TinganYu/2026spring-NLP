@@ -24,20 +24,25 @@
             <div class="column" style="width: 25%;">
                 <div class="row">
                     <img>
-                    <h2>新增日記記錄</h2>
+                    <h2>醫囑錄入</h2>
                 </div>
-                <input type="date" id="date" name="date">
+                <h4>使用語音上傳 (.mp3)</h4>
+                <button class="btn" id="upload-mp3">點擊上傳臨床語音檔</button>
+                <h4>或手動輸入醫囑內容</h4>
                 <textarea id="message" name="message" placeholder="請輸入文字……"></textarea> 
                 <div class="row">
-                    <button class="btn" id="erase">清除內容</button>
-                    <button class="btn select" id="analyze">儲存並分析</button>
+                    <button class="btn" id="translate">翻譯</button>
+                    <button class="btn select" id="analyze">執行安全解析</button>
                 </div>
             </div>
             
             <!-- 結果顯示頁面 -->
             <div class="column" style="left: 27%; background: #F1F5F9; width: 75%;">
                 <div class="float-row">
-                    <h2 style=" display: inline;">當日情緒語意分析</h2>
+                    <h2 style=" display: inline;">目標翻譯語言：</h2>
+                    <button class="btn language-btn select" id="chinese">繁體中文</button>
+                    <button class="btn language-btn" id="vietnamese">Tiếng Việ</button>
+                    <button class="btn language-btn" id="indonesian">Bahasa Indonesia</button>
                 </div>
             </div>
         </div>

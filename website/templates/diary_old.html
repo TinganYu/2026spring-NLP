@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title></title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="{{url_for('static', filename='css/style.css')}}">
+    </head>
+    <body>
+        <img src="/static/image/img11.png" alt="logo" class="logo">
+        <!-- 右上角的按鈕們 -->
+        <div class="row">
+            <button class="img-button" id="history">
+                <img src="/static/image/img13.png" alt="歷史紀錄">
+            </button>
+        </div>
+        <!-- 頁面主體 -->
+        <div class="column" style="padding-top: 5%;">
+            <!-- 切換網頁的按鈕們 -->
+            <div class="row" style="gap: 20px;">
+                <button class="img-button" id="medical orders">
+                    <img src="/static/image/button11.png" alt="醫療囑咐">
+                </button>
+                <button class="img-button" id="diary">
+                    <img src="/static/image/button12.png" alt="情緒日記">
+                </button>
+            </div>
+            <!-- 輸入, name是送資料時，對應的request欄位名稱 -->
+            <!-- value是預設值，要在網頁載入時改。位置不調了反正都會改 -->
+            <input type="date" id="dateInput" value="2026-05-18" style="position: relative; left: -35%;">
+            <div class="column">
+                <textarea id="message" name="message" placeholder="請輸入文字……"></textarea> 
+            </div>
+            <!-- 清空/儲存 -->
+            <div class="row" style="gap: 60px;">  
+                <button class="btn" id="erase" style="background: #737373;">清空</button>
+                <button class="btn" id="store" style="background: #5c99e1;">儲存</button>
+            </div>
+        </div> 
+
+        <script src="//unpkg.com/jquery"></script>
+        <script src="{{url_for('static', filename='js/main.js')}}"></script>
+    </body>
+</html>

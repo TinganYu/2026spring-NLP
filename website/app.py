@@ -1,6 +1,8 @@
-from curses import meta
 import sys
 import os
+sys.path.append(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 
 # 將 2026-NLP路徑 設為import時搜尋的第一順位
 import configparser
