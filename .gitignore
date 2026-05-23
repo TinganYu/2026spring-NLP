@@ -7,3 +7,4 @@ config.ini
 smoke_test.py
 日記測資.csv
 scripts/
+tests/
