@@ -1,30 +1,19 @@
 import configparser
 import os
 from typing import Any, List, Optional, TypedDict
-
 from azure.ai.textanalytics import HealthcareEntityRelation, TextAnalyticsClient
 from azure.core.credentials import AzureKeyCredential
-
 from shared.translate import TranslationResult, translate_text
-
 
 config = configparser.ConfigParser()
 config.read("config.ini")
 
-
 def _get_setting(section: str, key: str, env_name: str, default: str = None) -> str:
-    # 先讀 config.ini，讀不到再看環境變數
-    try:
-        value = config.get(section, key)
-    except (configparser.NoSectionError, configparser.NoOptionError):
-        value = os.getenv(env_name, default)
-        
+    value = config.get(section, key, fallback=os.getenv(env_name, default))
     return value.strip() if isinstance(value, str) else value
-
 
 _AZURE_KEY = _get_setting("AzureLanguage", "AZURE_LANGUAGE_KEY", "AZURE_LANGUAGE_KEY")
 _AZURE_ENDPOINT = _get_setting("AzureLanguage", "AZURE_LANGUAGE_ENDPOINT", "AZURE_LANGUAGE_ENDPOINT")
-
 
 class HealthEntityItem(TypedDict, total=False):
     text: str
@@ -48,24 +37,15 @@ class HealthAnalysisResult(TypedDict, total=False):
     translation: Optional[TranslationResult]
     detected_language: Optional[str]
 
-_client: Optional[TextAnalyticsClient] = None
-
-
 def _get_client() -> TextAnalyticsClient:
-    global _client
-    if _client is not None:
-        # client 已建立過就直接重用，避免重複初始化
-        return _client
-
+    """建立 Azure Text Analytics client"""
     if not _AZURE_KEY or not _AZURE_ENDPOINT:
         raise RuntimeError("Azure Language 設定未完成，請檢查 config.ini 或環境變數。")
-
     # 建立 Azure Text Analytics client
-    _client = TextAnalyticsClient(
+    return TextAnalyticsClient(
         endpoint=_AZURE_ENDPOINT,
         credential=AzureKeyCredential(_AZURE_KEY),
     )
-    return _client
 
 def _to_entity_item(entity: Any) -> HealthEntityItem:
     """將 Azure HealthcareEntity 物件轉換為字典"""
@@ -106,7 +86,7 @@ def _to_relation_item(relation: Any) -> HealthRelationItem:
     }
 
 
-# Azure healthcare analysis 只吃英文，因此要丟翻譯後的文字
+# ============主要程式： Azure healthcare analysis 只吃英文，因此要丟翻譯後的文字========
 def analyze_healthcare_entities(
     text: str,
     target_language: str = "en",
@@ -144,7 +124,7 @@ def analyze_healthcare_entities(
     final_text = translated_text
 
     if final_text is None and include_translation:
-        # 如果外面沒有先翻譯過，這裡先翻一次
+        # 如果外面沒有先翻譯過而且需要翻譯，這裡先翻一次
         translation_result = translate_text(
             text,
             target_language=target_language,
@@ -157,8 +137,8 @@ def analyze_healthcare_entities(
         final_text = text
 
     client = _get_client()
-    #Azure 醫療分析屬於複雜運算，採用的是「長時間執行作業 (Long-Running Operation, LRO)」。程式會先拿到一個 poller（輪詢器），然後用 .result() 等待 Azure 慢慢把結果算完傳回來。
 
+    #Azure 醫療分析屬於複雜運算，採用的是「長時間執行作業 (Long-Running Operation, LRO)」。程式會先拿到一個 poller（輪詢器），然後用 .result() 等待 Azure 慢慢把結果算完傳回來。
     poller = client.begin_analyze_healthcare_entities([final_text], language=target_language)
     result = poller.result()
 
@@ -193,6 +173,8 @@ def analyze_healthcare_entities(
         "translation": translation_result,
         "detected_language": detected_language,
     }
+
+
 
 
 if __name__ == "__main__":

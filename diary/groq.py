@@ -2,36 +2,23 @@
 
 負責將趨勢 JSON 包裝成 prompt 並呼叫 Groq 的 chat/completions API。
 """
-
 import configparser
 import json
 import os
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
-
 import requests
-
 
 config = configparser.ConfigParser()
 config.read("config.ini")
 
-
 def _get_setting(section: str, key: str, env_name: str, default: str = None) -> str:
-    try:
-        if config.has_option(section, key):
-            value = config.get(section, key)
-            return value.strip() if isinstance(value, str) else value
-    except Exception:
-        pass
-
-    value = os.getenv(env_name, default)
+    value = config.get(section, key, fallback=os.getenv(env_name, default))
     return value.strip() if isinstance(value, str) else value
-
 
 _GROQ_API_KEY = _get_setting("Groq", "GROQ_API_KEY", "GROQ_API_KEY")
 _GROQ_MODEL = _get_setting("Groq", "MODEL", "GROQ_MODEL", "llama-3.1-70b-versatile")
 _GROQ_BASE_URL = _get_setting("Groq", "BASE_URL", "GROQ_BASE_URL", "https://api.groq.com/openai/v1")
-
 
 @dataclass
 class GroqSummaryResult:

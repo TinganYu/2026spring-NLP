@@ -3,7 +3,6 @@
 
 封裝對 Azure Text Analytics 的呼叫以產生 `EmotionResult`。
 """
-
 import os
 from .models import EmotionResult
 from azure.core.credentials import AzureKeyCredential
@@ -14,20 +13,14 @@ import configparser
 config = configparser.ConfigParser()
 config.read("config.ini")
 
-
 def _get_azure_setting(env_name: str, default: str = None) -> str:
-    try:
-        return config.get("AzureLanguage", env_name)
-    except Exception:
-        print(f"config.get failed for {env_name}")
-        return os.getenv(env_name, default)
-
+    value = config.get("AzureLanguage", env_name, fallback=os.getenv(env_name, default))
+    return value.strip() if isinstance(value, str) else value
 
 # Read settings (can be set in [AzureLanguage] section of config.ini)
 _AZURE_KEY = _get_azure_setting("AZURE_LANGUAGE_KEY")
 _AZURE_ENDPOINT = _get_azure_setting("AZURE_LANGUAGE_ENDPOINT")
 _DEFAULT_LANGUAGE = _get_azure_setting("AZURE_LANGUAGE_DEFAULT", "zh")
-
 
 # Initialize client if credentials available; otherwise leave None and use local fallback
 text_analytics_client = None
@@ -54,7 +47,7 @@ def detect_emotion(text: str) -> EmotionResult:
 
     totals = {"positive": 0.0, "neutral": 0.0, "negative": 0.0}
     sentences_out = []
-    for s in doc.sentences:
+    for s in doc.sentences: # 把每一句單獨拉出的情緒標籤和信心分數
         lbl = s.sentiment # positive/neutral/negative
         scores = s.confidence_scores # confidence scores for each label
         sent_score = float(max(scores.positive, scores.neutral, scores.negative)) # 用最高的信心分數代表該句的情緒強度(我忘記azure是不是本來就只會輸出最高的)

@@ -1,10 +1,9 @@
 """Per-entry processing: 以單筆日記文本產生標準化的 `AnalysisResult`。
 
 職責：偵測情緒、呼叫 PHI 分析、回傳可存入 DB 的結構化結果。
-不要在這裡做昂貴的跨筆聚合或 on-demand 的深度分析。
+processor.py 現在僅負責單筆日記的 AI 呼叫與簡單整理，
+將較複雜的 PHI -> 前端格式化邏輯移至 diary.analysis
 """
-
-
 from .models import DiaryEntry, AnalysisResult
 from .emotion import detect_emotion
 from shared.phi import analyze_healthcare_entities
@@ -32,7 +31,7 @@ def process_entry(text: str, meta: dict = None) -> AnalysisResult:
 
     entry: DiaryEntry = {"text": processed_text, "meta": meta or {}}
     emotion = detect_emotion(processed_text)
-    phi_result = analyze_healthcare_entities(processed_text, target_language="en")
+    phi_result = analyze_healthcare_entities(processed_text, target_language="en", source_language="zh-Hant")
 
     entities = phi_result.get("entities", [])
     symptoms = [
@@ -46,5 +45,3 @@ def process_entry(text: str, meta: dict = None) -> AnalysisResult:
         "phi": phi_result,
     }
 
-# processor.py 現在僅負責單筆日記的 AI 呼叫與簡單整理，
-# 將較複雜的 PHI -> 前端格式化邏輯移至 diary.analysis

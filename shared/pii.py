@@ -1,25 +1,18 @@
 import configparser
 import os
 from typing import Any, Dict, List, Optional, TypedDict
-
 import requests
 
 config = configparser.ConfigParser()
 config.read("config.ini")
 
-
 def _get_setting(env_name: str, default: str = None) -> str:
-    try:
-        return config.get("AzureLanguage", env_name).strip()
-    except Exception:
-        value = os.getenv(env_name, default)
-        return value.strip() if isinstance(value, str) else value
-
+    value = config.get("AzureLanguage", env_name, fallback=os.getenv(env_name, default))
+    return value.strip() if isinstance(value, str) else value
 
 _AZURE_KEY = _get_setting("AZURE_LANGUAGE_KEY")
 _AZURE_ENDPOINT = _get_setting("AZURE_LANGUAGE_ENDPOINT")
 _AZURE_LANGUAGE = _get_setting("AZURE_LANGUAGE_DEFAULT", "zh-Hant")
-
 
 class PIIItem(TypedDict, total=False):
     text: str
@@ -28,11 +21,11 @@ class PIIItem(TypedDict, total=False):
     end: int
     confidence_score: Optional[float]
 
-
 class PIIReview(TypedDict, total=False):
     needs_masking: bool
     entities: List[PIIItem]
     redacted_text: Optional[str]
+
 
 
 def review_pii(text: str, language: Optional[str] = None) -> PIIReview:
@@ -62,7 +55,7 @@ def review_pii(text: str, language: Optional[str] = None) -> PIIReview:
                 "Organization",
             ],
             "redactionPolicy": {
-                "policyKind": "entityMask",
+                "policyKind": "entityMask", # 使用上課教的實體遮罩會將他替換成類似 [PII_Person] 的標籤
             },
         },
         "analysisInput": {
@@ -75,7 +68,7 @@ def review_pii(text: str, language: Optional[str] = None) -> PIIReview:
             ]
         },
     }
-
+    # ======這幾段基本上只是做檢查和錯誤處理===================================
     try:
         response = requests.post(api_url, headers=headers, json=body, timeout=30)
         response.raise_for_status()
@@ -93,6 +86,7 @@ def review_pii(text: str, language: Optional[str] = None) -> PIIReview:
     if not docs:
         parsed_entities: List[Dict[str, Any]] = []
         parsed_redacted_text = text
+    # ========================================================================
     else:
         doc = docs[0]
         parsed_entities = doc.get("entities", [])
@@ -116,6 +110,8 @@ def review_pii(text: str, language: Optional[str] = None) -> PIIReview:
         "entities": items,
         "redacted_text": parsed_redacted_text,
     }
+
+
 
 
 if __name__ == "__main__":

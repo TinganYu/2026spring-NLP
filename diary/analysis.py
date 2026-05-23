@@ -3,17 +3,19 @@
 提供 correlation discovery、看診懶人包等 on-demand 的 PHI 摘要功能。
 這些函式通常在使用者請求時被呼叫，而非在每次 process_entry 時執行。
 """
-
 from collections import Counter
 from typing import Any, Dict, List
-
 from .models import DiaryRecord, SymptomRecord, MedicationRecord, AnalysisResult
 
 # severity mapping for qualifiers (copied to keep consistent behavior with processor)
 SEVERITY_MAP = {
+    # level 3 - very severe
     "severe": 3, "serious": 3, "intense": 3, "extreme": 3, "excruciating": 3,
-    "moderate": 2, "significant": 2,
-    "mild": 1, "slight": 1, "minor": 1, "minimal": 1,
+    "agonizing": 3, "unbearable": 3, "very severe": 3, "terrible": 3, "horrible": 3,
+    # level 2 - moderate
+    "moderate": 2, "significant": 2, "medium": 2, "fair": 2, "quite painful": 2,
+    # level 1 - mild
+    "mild": 1, "slight": 1, "minor": 1, "minimal": 1, "mildly": 1, "low": 1,
 }
 
 def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:

@@ -1,78 +1,45 @@
 import configparser
 import os
 from typing import List, Optional, Sequence, Union, TypedDict
-
 from azure.ai.translation.text import TextTranslationClient
 from azure.core.credentials import AzureKeyCredential
 from azure.core.exceptions import HttpResponseError
 
-
 config = configparser.ConfigParser()
 config.read("config.ini")
 
-
 def _get_setting(section: str, key: str, env_name: str, default: str = None) -> str:
-    try:
-        value = config.get(section, key)
-    except (configparser.NoSectionError, configparser.NoOptionError):
-        value = os.getenv(env_name, default)
-        
+    value = config.get(section, key, fallback=os.getenv(env_name, default))
     return value.strip() if isinstance(value, str) else value
-
 
 _AZURE_TRANSLATOR_KEY = _get_setting("AzureTranslator", "Key", "AZURE_TRANSLATOR_KEY")
 _AZURE_TRANSLATOR_ENDPOINT = _get_setting("AzureTranslator", "Endpoint", "AZURE_TRANSLATOR_ENDPOINT")
 _AZURE_TRANSLATOR_REGION = _get_setting("AzureTranslator", "Region", "AZURE_TRANSLATOR_REGION")
-
 
 class TranslationItem(TypedDict, total=False):
     text: str
     to: str
     # alignment 已移除，前端/上層負責處理對齊需求
 
-
 class TranslationResult(TypedDict, total=False):
     source_text: str
     detected_language: Optional[str]
     translations: List[TranslationItem]
 
-
-_client: Optional[TextTranslationClient] = None
-
-
 def _get_client() -> TextTranslationClient:
-    global _client
-    if _client is not None:
-        return _client
-
     if not _AZURE_TRANSLATOR_KEY or not _AZURE_TRANSLATOR_ENDPOINT or not _AZURE_TRANSLATOR_REGION:
         raise RuntimeError("Azure Translator 設定未完成，請檢查 config.ini 或環境變數。")
 
-    _client = TextTranslationClient(
+    return TextTranslationClient(
         credential=AzureKeyCredential(_AZURE_TRANSLATOR_KEY),
         endpoint=_AZURE_TRANSLATOR_ENDPOINT,
         region=_AZURE_TRANSLATOR_REGION,
     )
-    return _client
-
-
-TargetLanguage = Union[str, Sequence[str]]
-
-
-def _infer_source_language(text: str) -> Optional[str]:
-    """簡單猜來源語言；目前只針對中文文本回傳 zh-Hant，避免 Azure 自動偵測誤判。"""
-    if not text:
-        return None
-
-    for ch in text:
-        if "\u4e00" <= ch <= "\u9fff":
-            return "zh-Hant"
-    return None
 
 
 def translate_text(
     text: str,
-    target_language: TargetLanguage,
+    target_language: Union[str, Sequence[str]],
     source_language: Optional[str] = None,
 ) -> TranslationResult:
     """Translate text with Azure Translator.
@@ -90,12 +57,9 @@ def translate_text(
         return {"source_text": text, "detected_language": None, "translations": []}
 
     client = _get_client()
-    targets = [target_language] if isinstance(target_language, str) else list(target_language)
+    targets = [target_language] if isinstance(target_language, str) else list(target_language) # Azure Translator API 需要一個 list，即使只有一個目標語言也要包成 list 傳入。
     if not targets:
         raise ValueError("target_language 不可為空。")
-
-    # 沒有指定來源語言時，先對中文文本做簡單推斷，避免 Azure 誤判
-    inferred_source_language = source_language or _infer_source_language(text)
 
     body = [text]
 
@@ -103,7 +67,7 @@ def translate_text(
         response = client.translate(
             body=body,
             to_language=targets,
-            from_language=inferred_source_language,
+            from_language=source_language,
         )
     except HttpResponseError as exc:
         raise RuntimeError(f"Azure 翻譯失敗: {exc}") from exc
@@ -111,7 +75,7 @@ def translate_text(
     if not response:
         return {"source_text": text, "detected_language": None, "translations": []}
 
-    first_item = response[0]
+    first_item = response[0] # Azure Translator API 的回應是一個列表，每個元素對應一個輸入文本。因為我們一次只翻譯一段文本，所以取第一個元素即可。
     detected_language = getattr(getattr(first_item, "detected_language", None), "language", None)
     translations = [{"text": translation.text, "to": translation.to} for translation in first_item.translations]
 
@@ -122,8 +86,6 @@ def translate_text(
     }
 
 
-# `_get_original_text_from_alignment` 已移除 — 翻譯對齊功能改由前端處理
-
 # ============= Convenience function for common use case =============
 # 只回傳第一個翻譯結果的文本，適合大多數只需要單一翻譯的情況。
 def translate_to(text: str, target_language: str, source_language: Optional[str] = None) -> str:
@@ -133,6 +95,9 @@ def translate_to(text: str, target_language: str, source_language: Optional[str]
     if not result.get("translations"):
         return text
     return result["translations"][0]["text"]
+
+
+
 
 
 if __name__ == "__main__":
