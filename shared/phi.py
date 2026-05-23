@@ -114,21 +114,20 @@ def analyze_healthcare_entities(
     translated_text: Optional[str] = None,
     include_translation: bool = True,
 ) -> HealthAnalysisResult:
-    """Translate text to English and analyze healthcare entities/relation with Azure.
-
-    Parameters
+    """
+    把文本翻譯成英文後丟給 Azure 醫療分析，回傳結構化的實體和關係資料。
+    參數
     ----------
     text:
-        Input text in any supported source language.
+        輸入文本，可以是任何 Azure 支援的語言，但會先被翻譯成英文再送分析。
     target_language:
-        Translation target language for the preprocessing step. For Azure healthcare,
-        this should usually be "en".
+        翻譯的目標語言，預設為 "en"。Azure 醫療分析通常需要英文輸入。
     source_language:
-        Optional source language for translation.
+        可選的來源語言，用於翻譯。如果不提供，系統會嘗試自動偵測。
     translated_text:
-        If you already translated the text upstream, pass it here to avoid another translation call.
+        如果上游已經翻譯過文本，可以直接傳入這個參數，避免在這裡重複翻譯一次。
     include_translation:
-        If True and translated_text is not supplied, this function will translate once.
+        如果沒有提供且 include_translation 為 True，則會在這裡進行翻譯。 (如果本來就是英文這邊就false)
     """
     if not text:
         # 空字串直接回傳空結果，避免多打 API

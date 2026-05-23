@@ -14,8 +14,8 @@ from .visualization import build_health_dashboard_payload
 
 
 def aggregate_weekly_records(records: List[AnalysisResult]) -> Dict[str, Any]:
-    """Aggregate 7 days of diary records into weekly analysis.
-    
+    """Aggregate n days of diary records into weekly analysis.
+    (會從app.py決定提供幾天的內容，根據那些資料畫表格，不限於7天)
     接收 AnalysisResult 列表，轉成 DiaryRecord 並生成圖表。
     """
     if not records:
@@ -30,7 +30,7 @@ def aggregate_weekly_records(records: List[AnalysisResult]) -> Dict[str, Any]:
         "medication_frequency_chart": {},
         "cooccurrence_chart": {},
         "symptom_timeline": {},
-        "symptom_severity_chart": {},
+        # "symptom_severity_chart": {},
         "medication_timeline": {},
         "emotion_heatmap_calendar": {},
         "cooccurrence_heatmap": {},
@@ -51,14 +51,27 @@ def aggregate_weekly_records(records: List[AnalysisResult]) -> Dict[str, Any]:
         "label_distribution": dict(label_counts),
         "trend_direction": "stable",
     }
-    if len(scores) >= 2:
-        trend_value = scores[-1] - scores[0]
+    if len(scores) >= 2: # 如果有兩筆以上的資料，才計算趨勢
+        polarities = [
+            (-r["emotion_score"] if r["emotion_label"].lower() == "negative"
+             else r["emotion_score"] if r["emotion_label"].lower() == "positive"
+             else 0.0) # 這邊預設 neutral 是 0，negative 是負分，positive 是正分
+            for r in diary_records
+        ]
+        # 計算簡單的線性趨勢（slope），判斷情緒是改善、惡化還是穩定
+        n = len(polarities)
+        mean_x = (n - 1) / 2
+        mean_y = sum(polarities) / n
+        numerator = sum((idx - mean_x) * (value - mean_y) for idx, value in enumerate(polarities))
+        denominator = sum((idx - mean_x) ** 2 for idx in range(n))
+        slope = (numerator / denominator) if denominator else 0.0
+        trend_value = slope * (n - 1)
         if trend_value > 0.1:
             emotion_stats["trend_direction"] = "improving"
         elif trend_value < -0.1:
             emotion_stats["trend_direction"] = "declining"
 
-    # 提取 PHI 關係（從原始 AnalysisResult）
+    # 提取 PHI 關係（從原始 AnalysisResult），達成跨日的 PHI 關係分析
     all_relations = []
     for record in records:
         phi_summary = record.get("phi") or {}
@@ -67,17 +80,17 @@ def aggregate_weekly_records(records: List[AnalysisResult]) -> Dict[str, Any]:
                 {
                     "relation_type": relation.get("relation_type"),
                     "roles": relation.get("roles", []),
-                    "date": record["entry"]["meta"].get("date"),
+                    "date": record["entry"]["meta"].get("date"), # 加入日期資訊
                 }
             )
 
-    grouped_relations = defaultdict(list)
+    grouped_relations = defaultdict(list) # 把所有的relation資料合併，根據 relation_type 分組
     for relation in all_relations:
         grouped_relations[relation.get("relation_type", "Unknown")].append(relation)
 
     phi_relations = [
-        {"relation_type": rel_type, "occurrences": len(items), "examples": items[:2]}
-        for rel_type, items in sorted(grouped_relations.items(), key=lambda item: len(item[1]), reverse=True)[:5]
+        {"relation_type": rel_type, "occurrences": len(items), "examples": items[:2]} # 取前兩筆作為示例
+        for rel_type, items in sorted(grouped_relations.items(), key=lambda item: len(item[1]), reverse=True)[:5] # 取前5種最常見的關係類型
     ]
 
     return {
@@ -86,6 +99,6 @@ def aggregate_weekly_records(records: List[AnalysisResult]) -> Dict[str, Any]:
         "record_count": len(diary_records),
         "emotion_statistics": emotion_stats,
         "phi_relations": phi_relations,
-        **dashboard,
+        **dashboard, # 包含所有圖表 payload (** 把dashboard dict裡的key/value攤平加入/合併最終回傳的dict)
     }
 
