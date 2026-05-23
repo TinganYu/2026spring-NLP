@@ -1,6 +1,9 @@
 """將已整理好的分析資料轉成前端圖表 payload（labels/series/markers/ranking）。
 
 此模組只負責格式化與統計的視覺化輸出，不直接執行 NLP/PHI 分析。
+
+相較值得保留的：emotion_line_chart（情緒趨勢折線）、symptom_frequency_chart（症狀頻率長條）、medication_frequency_chart（用藥頻率長條）、symptom_timeline（症狀出現/消失甘特圖）
+比較不直覺: cooccurrence_chart 和 cooccurrence_heatmap
 """
 
 from collections import Counter, defaultdict
@@ -181,37 +184,37 @@ def build_symptom_timeline(records: List[DiaryRecord]) -> Dict[str, Any]:
     return {"chart_type": "timeline", "symptoms": symptoms_out}
 
 
-def build_symptom_severity_chart(records: List[DiaryRecord]) -> Dict[str, Any]:
-    """症狀嚴重程度趨勢，多線折線圖（過濾掉全為 1 的症狀）"""
-    sorted_records = _sort_records_by_date(records)
-    labels = [r["date"] for r in sorted_records]
-    
-    # 找出哪些症狀有 > 0 的 severity
-    severity_map = defaultdict(lambda: [None] * len(sorted_records))
-    display_map = {}
-    valid_keys = set()
-
-    for i, record in enumerate(sorted_records):
-        for sym in record["symptoms"]:
-            k = sym["key"] or sym["display"]
-            display_map[k] = sym["display"]
-            severity_map[k][i] = sym["severity"]
-            if sym["severity"] > 0:
-                valid_keys.add(k)
-
-    series = []
-    for k in valid_keys:
-        series.append({
-            "name": k,
-            "display": display_map[k],
-            "data": severity_map[k]
-        })
-
-    return {
-        "chart_type": "multi_line",
-        "labels": labels,
-        "series": series
-    }
+# def build_symptom_severity_chart(records: List[DiaryRecord]) -> Dict[str, Any]:
+#     """症狀嚴重程度趨勢，多線折線圖（過濾掉全為 1 的症狀）"""
+#     sorted_records = _sort_records_by_date(records)
+#     labels = [r["date"] for r in sorted_records]
+#
+#     # 疼痛/嚴重程度指數目前未入庫，先停用長期趨勢圖
+#     severity_map = defaultdict(lambda: [None] * len(sorted_records))
+#     display_map = {}
+#     valid_keys = set()
+#
+#     for i, record in enumerate(sorted_records):
+#         for sym in record["symptoms"]:
+#             k = sym["key"] or sym["display"]
+#             display_map[k] = sym["display"]
+#             severity_map[k][i] = sym["severity"]
+#             if sym["severity"] > 0:
+#                 valid_keys.add(k)
+#
+#     series = []
+#     for k in valid_keys:
+#         series.append({
+#             "name": k,
+#             "display": display_map[k],
+#             "data": severity_map[k]
+#         })
+#
+#     return {
+#         "chart_type": "multi_line",
+#         "labels": labels,
+#         "series": series
+#     }
 
 
 def build_medication_timeline(records: List[DiaryRecord]) -> Dict[str, Any]:
@@ -333,7 +336,7 @@ def build_health_dashboard_payload(records: List[DiaryRecord], top_n: int = 10) 
         "medication_frequency_chart": build_medication_frequency_chart(records, top_n=top_n),
         "cooccurrence_chart": build_emotion_symptom_cooccurrence(records),
         "symptom_timeline": build_symptom_timeline(records),
-        "symptom_severity_chart": build_symptom_severity_chart(records),
+        # "symptom_severity_chart": build_symptom_severity_chart(records),
         "medication_timeline": build_medication_timeline(records),
         "emotion_heatmap_calendar": build_emotion_heatmap_calendar(records),
         "cooccurrence_heatmap": build_cooccurrence_heatmap(records),

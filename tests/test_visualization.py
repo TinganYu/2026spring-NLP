@@ -63,7 +63,6 @@ def test_build_dashboard_payload():
         "medication_frequency_chart",
         "cooccurrence_chart",
         "symptom_timeline",
-        "symptom_severity_chart",
         "medication_timeline",
         "emotion_heatmap_calendar",
         "cooccurrence_heatmap",
