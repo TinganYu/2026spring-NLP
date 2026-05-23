@@ -4,3 +4,6 @@ config.ini
 .venv/
 .vscode/
 .pytest_cache/
+smoke_test.py
+日記測資.csv
+scripts/
