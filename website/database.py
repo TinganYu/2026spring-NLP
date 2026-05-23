@@ -12,17 +12,20 @@ def disconnect():
     client.close()
     return
 
-def diary_insert():
+def diary_insert(entry, diary_record):
+    insert_data = diary_record.copy()
+    insert_data["text"] = entry["text"]
     #alloc_tmp = {'name':tmp,'chr1':c[0]['_id'],'chr2':c[1]['_id'],'chr3':c[2]['_id']}
-    #db.allocations.insert_one(alloc_tmp)
-    pass
+    db.diary.insert_one(insert_data)
+    print("[DATABASE] Inserted diary record complete.")
+    return
 
 def diary_find():   
     # db.materia_func.find({'type':type})
-    pass
+    return
 
 def medical_insert():
-    pass
+    return
 
 def medical_find():
-    pass
+    return

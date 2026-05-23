@@ -75,6 +75,45 @@
     color: white;
 }
 
+.pii-btn {
+    border: none;
+    background-color: #EA580C;
+    color: white;
+}
+
+/* PII 浮窗 */
+#overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+}
+
+#popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    z-index: 1001;
+    width: 300px;
+}
+
+.pii-entity {
+    font-weight: bold;
+    background: #FEF08A;
+    border-radius: 5px;
+    padding: 2px 6px;
+}
+
 /* 其他 */
 #upload-mp3 {
     width: 95%;
@@ -93,3 +132,7 @@
     resize: none;
 }
 
+#emotion-num {
+    font-size: 24px;
+    font-weight: bold;
+}

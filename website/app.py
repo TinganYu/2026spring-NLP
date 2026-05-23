@@ -1,10 +1,10 @@
 import sys
 import os
+# 將 2026-NLP路徑 設為import時搜尋的第一順位
 sys.path.append(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
 
-# 將 2026-NLP路徑 設為import時搜尋的第一順位
 import configparser
 from flask import Flask, request, abort, render_template, url_for, Blueprint, jsonify
 from diary.processor import process_entry
@@ -56,30 +56,47 @@ def get_weekly_dashboard():
 def process_diary():
     if request.method == "POST":
         print("POST!")
-        text = request.json.get("text")
-        meta = request.json.get("meta")
+        data = request.form
+        date = data["date"] #request.json.get("date")
+        text = data["message"] #request.json.get("text")
+        meta = None #request.json.get("meta")
         result = process_entry(text, meta)  # AnalysisResult dict
         cleaned_result = _remove_data_sources(result)  # 移除 data sources
-        if hasattr(db, "save"):
-            db.save(cleaned_result)  # 存整個 AnalysisResult 到 DB
+        print("Cleaned Result:", cleaned_result)
         
         # 同時轉成 DiaryRecord 回傳給前端
-        diary_record_view = to_diary_record(result, (meta or {}).get("date", ""))
-        return jsonify({
-            "raw_saved": cleaned_result,
-            "view_model": diary_record_view 
-        })
+        diary_record_view = to_diary_record(result, date) #(meta or {}).get("date", ""))
+        
+        db.diary_insert(cleaned_result['entry'], diary_record_view) # 存 diary data 到 DB
+        print("Cleaned Result:", cleaned_result)    
+        print("Diary Record View:", diary_record_view)
+        
+        return jsonify(diary_record_view)
 
-@app.route("/diary_pii_review", methods=["POST"])  #接收前端送來的內容，並回傳PII審核結果
+@app.route("/pii_review", methods=["POST"])  #接收前端送來的內容，並回傳PII審核結果
 def diary_pii_review():
-    text = request.json.get("text", "")
+    text = request.form
+    text = text['text']
     review = review_pii(text) 
+    print("PII Review Result:", review)
     return jsonify(review)
 
 @app.route("/")  #一打開網站要做的事情
 def home():
     db.connect()
     return render_template("diary.html")
+
+@app.route("/diary")  #前往情緒日記頁面
+def diary():
+    return render_template("diary.html")
+
+@app.route("/medical")  #前往醫囑頁面
+def medical():
+    return render_template("medical.html")
+
+@app.route("/graph")  #前往圖表頁面
+def graph():
+    return render_template("graph.html")
 
 if __name__ == "__main__":
     app.run()

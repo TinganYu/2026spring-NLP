@@ -13,8 +13,8 @@
             <h1></h1>-->
             <!-- tab切換紐 -->
             <div class="row" style="grid-column: 2; justify-self: center;">
-                <button class="tab select" id="medical-btn">醫療囑咐</button>
-                <button class="tab" id="diary-btn">情緒日記</button>
+                <button class="tab" id="medical-btn">醫療囑咐</button>
+                <button class="tab select" id="diary-btn">情緒日記</button>
                 <button class="tab" id="graph-btn">健康趨勢</button>
             </div>
         </div>
@@ -30,19 +30,34 @@
                 <textarea id="message" name="message" placeholder="請輸入文字……"></textarea> 
                 <div class="row">
                     <button class="btn" id="erase">清除內容</button>
-                    <button class="btn select" id="analyze">儲存並分析</button>
+                    <button class="btn diary-btn" id="analyze">儲存並分析</button>
+                </div>
+                <div id="analyzeComplete">
                 </div>
             </div>
             
             <!-- 結果顯示頁面 -->
-            <div class="column" style="left: 27%; background: #F1F5F9; width: 75%;">
+            <div class="column" id="result-col" style="left: 27%; background: #F1F5F9; width: 75%;">
                 <div class="float-row">
-                    <h2 style=" display: inline;">當日情緒語意分析</h2>
+                    <h2 style="display: inline;">當日情緒語意分析</h2>
+                </div>
+            </div>
+        </div>
+
+        <!-- 偵測到PII後顯示的浮窗 -->
+        <div class="overlay" id="overlay">
+            <div class="popup" id="popup">
+                <h2>安全攔截：偵測到敏感個資</h2>
+                <p id="popup_text"></p>
+                <div class="row">
+                    <button class="btn" id="ignore">忽略送出</button>
+                    <button class="btn pii-btn" id="pii-redacted">確定遮蔽並解析</button>
                 </div>
             </div>
         </div>
 
         <script src="//unpkg.com/jquery"></script>
-        <script src="{{url_for('static', filename='js/main.js')}}"></script>
+        <script src="{{url_for('static', filename='js/diary.js')}}"></script>
+        <script src="{{url_for('static', filename='js/tab.js')}}"></script>
     </body>
 </html>
