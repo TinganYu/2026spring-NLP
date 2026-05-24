@@ -16,8 +16,10 @@ class SymptomRecord(TypedDict):
 class MedicationRecord(TypedDict):
     key: str
     display: str
-    frequency: str
-    inferred: bool # 透過assertion推斷是否正在服用
+    dosages: List[str]
+    frequencies: List[str]
+    notes: List[str]
+    taken: bool # 根據日記內容判定是否有服用（True 表示日記中有記錄/推論為有服用）
 
 
 class DiaryRecord(TypedDict):  # 用來讀取DB內的值，並改成前端需要的格式

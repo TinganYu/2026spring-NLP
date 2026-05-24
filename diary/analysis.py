@@ -27,14 +27,31 @@ def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
     entities = phi.get("entities", [])
     relations = phi.get("relations", [])
 
-    # 解析 relations 備用
-    parsed_relations = []
-    for rel in relations:
-        roles = {r.get("name") or "Unknown": r.get("entity_text") or "" for r in rel.get("roles", [])}
-        parsed_relations.append({
-            "type": rel.get("relation_type"),
-            "roles": roles
-        })
+    def _get_role_text(roles: List[Dict[str, Any]], *role_names: str) -> str:
+        for role_name in role_names:
+            for role in roles:
+                if role.get("name") == role_name:
+                    return role.get("entity_text") or ""
+        return ""
+
+    def _infer_entity_status(entity: Dict[str, Any]) -> str:
+        # 回傳適用於 symptoms 的 status：affirmed/negated/hypothetical/historical/other_person/uncertain
+        assertion = entity.get("assertion")
+        if not assertion:
+            return "affirmed"
+        cert = assertion.get("certainty")
+        cond = assertion.get("conditionality")
+        temp = assertion.get("temporal")
+        assoc = assertion.get("association")
+
+        if cert in ("negative", "negative_possible"): return "negated"
+        if cond in ("hypothetical", "conditional"): return "hypothetical"
+        if temp == "past": return "historical"
+        if temp == "future": return "hypothetical"
+        if assoc == "other": return "other_person"
+        if cert in ("positive_possible", "neutral_possible"): return "uncertain"
+
+        return "affirmed"
 
     # 1. 整理 Symptoms
     symptom_records = []
@@ -43,29 +60,17 @@ def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
             key = ent.get("normalized_text") or ent.get("text") or ""
             display = ent.get("text") or ""
 
-            status = "affirmed" # 自己的變數，先預設是肯定，後續根據 assertion 的不同屬性調整成 negated(消失)、hypothetical、historical、uncertain、other_person 等等
-            assertion = ent.get("assertion")
-            if assertion:
-                cert = assertion.get("certainty")
-                cond = assertion.get("conditionality")
-                temp = assertion.get("temporal")
-                assoc = assertion.get("association")
-
-                if cert in ("negative", "negative_possible"): status = "negated"
-                elif cond in ("hypothetical", "conditional"): status = "hypothetical"
-                elif temp == "past": status = "historical"
-                elif temp == "future": status = "hypothetical"
-                elif assoc == "other": status = "other_person"
-                elif cert in ("positive_possible", "neutral_possible"): status = "uncertain"
+            status = _infer_entity_status(ent)
 
             max_severity = 1
-            for pr in parsed_relations:
-                if pr["type"] == "QualifierOfCondition":
-                    cond_text = pr["roles"].get("Condition") or pr["roles"].get("Symptom") # 有時候 relation 的 role 可能叫 Condition，有時候叫 Symptom，要兩個都檢查
+            for rel in relations:
+                if rel.get("relation_type") == "QualifierOfCondition":
+                    roles = rel.get("roles", [])
+                    cond_text = _get_role_text(roles, "Condition", "Symptom")
                     if cond_text == display:
-                        q = pr["roles"].get("Qualifier")
-                        if q and q.lower() in SEVERITY_MAP:
-                            max_severity = max(max_severity, SEVERITY_MAP[q.lower()])
+                        qualifier = _get_role_text(roles, "Qualifier")
+                        if qualifier and qualifier.lower() in SEVERITY_MAP:
+                            max_severity = max(max_severity, SEVERITY_MAP[qualifier.lower()])
 
             symptom_records.append(SymptomRecord(
                 key=key,
@@ -74,37 +79,65 @@ def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
                 severity=max_severity
             ))
 
-    # 2. 整理 Medications
+    # 2. 整理 Medications（改為累積劑量/頻率/註記為 list）
     medication_records = []
     for ent in entities:
         if ent.get("category") == "MedicationName":
             key = ent.get("normalized_text") or ent.get("text") or ""
             display = ent.get("text") or ""
-            frequency = ""
 
-            for pr in parsed_relations:
-                if pr["type"] == "FrequencyOfMedication":
-                    med_text = pr["roles"].get("Medication") or pr["roles"].get("Drug")
-                    if med_text == display:
-                        frequency = pr["roles"].get("Frequency", "")
-                        break
+            dosages: List[str] = []
+            frequencies: List[str] = []
+            notes: List[str] = []
 
+            for rel in relations:
+                roles = rel.get("roles", [])
+                med_text = _get_role_text(roles, "Medication", "Drug")
+                if med_text != display:
+                    continue
+
+                rtype = rel.get("relation_type")
+                if rtype == "DosageOfMedication":
+                    val = _get_role_text(roles, "Dosage")
+                    if val:
+                        dosages.append(val)
+                elif rtype == "FrequencyOfMedication":
+                    val = _get_role_text(roles, "Frequency")
+                    if val:
+                        frequencies.append(val)
+                else:
+                    # 其他和藥物有關的 relation 當作註記保留
+                    role_map = {role.get("name") or "Unknown": role.get("entity_text") or "" for role in roles}
+                    text = _format_relation_text(rtype, role_map)
+                    if text:
+                        notes.append(text)
+
+            # medication 推論為 True 當且僅當 entity 有 assertion 且 status 為 affirmed
+            med_status = _infer_entity_status(ent)
+            taken_flag = (med_status == "affirmed") and bool(ent.get("assertion"))
             medication_records.append(MedicationRecord(
-                key=key, display=display, frequency=frequency, inferred=False
+                key=key,
+                display=display,
+                dosages=dosages,
+                frequencies=frequencies,
+                notes=notes,
+                taken=taken_flag
             ))
 
-    # 3. 整理 Events
+    # 3. 整理 Events 只拿出需要的
     target_event_types = {
         "QualifierOfCondition", "TimeOfCondition", "DurationOfCondition",
         "DosageOfMedication", "FrequencyOfMedication", "TimeOfMedication", "BodySiteOfCondition"
     }
     events = []
-    for pr in parsed_relations:
-        if pr["type"] in target_event_types:
+    for rel in relations:
+        relation_type = rel.get("relation_type")
+        if relation_type in target_event_types:
+            roles = {role.get("name") or "Unknown": role.get("entity_text") or "" for role in rel.get("roles", [])}
             events.append({
-                "type": pr["type"], # event種類
-                "roles": pr["roles"], # role名稱對應的實體文字，例如 {"Condition": "頭痛", "Duration": "三天"}
-                "text": _format_relation_text(pr["type"], pr["roles"])
+                "type": relation_type, # event種類
+                "roles": roles, # role名稱對應的實體文字，例如 {"Condition": "頭痛", "Duration": "三天"}
+                "text": _format_relation_text(relation_type, roles)
             })
 
     return DiaryRecord(

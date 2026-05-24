@@ -83,13 +83,20 @@ def build_symptom_frequency_chart(records: List[DiaryRecord], top_n: int = 10) -
     }
 
 
-def build_medication_frequency_chart(records: List[DiaryRecord], top_n: int = 10) -> Dict[str, Any]:
-    """統計藥物出現頻率"""
+def build_medication_frequency_chart(records: List[DiaryRecord], top_n: int = 10, include_only_taken: bool = False) -> Dict[str, Any]:
+    """統計藥物出現頻率。
+
+    預設會包含所有藥物（`include_only_taken=False`）。
+    若 `include_only_taken=True`，則僅計入 `taken==True` 的藥物（排除未標記為 taken 的）。
+    """
     counter = Counter()
     name_map = {}
     
     for record in records:
         for med in record["medications"]:
+            # 若要求只包含 taken 的藥，則排除未標記為 taken 的
+            if include_only_taken and not med.get("taken"):
+                continue
             key = med["key"] or med["display"]
             if key:
                 counter[key] += 1
@@ -228,24 +235,24 @@ def build_medication_timeline(records: List[DiaryRecord]) -> Dict[str, Any]:
 
         for med in record["medications"]:
             k = med["key"] or med["display"]
-            inferred = med["inferred"]
+            taken = med["taken"]
 
             if k not in tracker:
                 tracker[k] = {
                     "display": med["display"],
-                    "current_span": {"start": date_str, "end": date_str, "inferred": inferred},
+                    "current_span": {"start": date_str, "end": date_str, "taken": taken},
                     "spans": []
                 }
             else:
                 last_end_str = tracker[k]["current_span"]["end"]
                 last_end_date = datetime.strptime(last_end_str, "%Y-%m-%d")
-                last_inferred = tracker[k]["current_span"]["inferred"]
+                last_taken = tracker[k]["current_span"]["taken"]
 
-                if (curr_date - last_end_date).days == 1 and last_inferred == inferred:
+                if (curr_date - last_end_date).days == 1 and last_taken == taken:
                     tracker[k]["current_span"]["end"] = date_str
                 else:
                     tracker[k]["spans"].append(tracker[k]["current_span"])
-                    tracker[k]["current_span"] = {"start": date_str, "end": date_str, "inferred": inferred}
+                    tracker[k]["current_span"] = {"start": date_str, "end": date_str, "taken": taken}
 
     medications_out = []
     for k, data in tracker.items():

@@ -73,7 +73,7 @@ def _to_entity_item(entity: Any) -> HealthEntityItem:
 
 def _to_relation_item(relation: Any) -> HealthRelationItem:
     """將 Azure HealthcareRelation 物件轉換為字典"""
-    roles = [
+    roles = [ # 把關係裡的角色和對應的實體文字都放一起
         {
             "name": role.name,
             "entity_text": role.entity.text if role.entity else None,
