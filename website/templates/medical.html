@@ -21,7 +21,7 @@
         <!-- 頁面主體 -->
         <div class="row" id="main">
             <!-- 左欄 -->
-            <div class="column" style="width: 25%;">
+            <div class="column" style="width: 25%;" id="input-col">
                 <div class="row">
                     <img>
                     <h2>醫囑錄入</h2>
@@ -29,11 +29,20 @@
                 <h4>使用語音輸入</h4>
                 <button class="btn" id="upload-mp3">點擊開始錄入醫囑內容</button>
                 <h4>或手動輸入醫囑內容</h4>
-                <textarea id="message" name="message" placeholder="請輸入文字……"></textarea> 
+                <textarea id="message" name="message" placeholder="請輸入文字……" class="textarea"></textarea> 
                 <div class="row">
                     <button class="btn" id="erase">清除內容</button>
                     <button class="btn select" id="analyze">翻譯並執行醫囑解析</button>
                 </div>
+            </div>
+            <!-- 結果顯示頁面(左欄) -->
+            <div class="column" style="width: 25%; display: none;" id="output-col">
+                <h2>醫囑錄入</h2>
+                <h4>原始醫囑</h4>
+                <textarea id="original-text" class="textarea" readonly></textarea> 
+                <h4>醫囑完整翻譯</h4>
+                <textarea id="translated-text" class="textarea" readonly></textarea>
+                <button class="btn" id="return">返回輸入</button>
             </div>
             
             <!-- 結果顯示頁面 -->
@@ -59,6 +68,15 @@
                     <button class="btn" id="ignore">忽略送出</button>
                     <button class="btn pii-btn" id="pii-redacted">確定遮蔽並解析</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- 語音輸入的浮窗 -->
+        <div class="overlay" id="speech-overlay">
+            <div class="popup" id="speech-popup">
+                <h2>語音錄入中</h2>
+                <p>您現在可以開始說話。</p>
+                <p>當您暫停幾秒後，我們會關閉此浮窗自動結束語音輸入並整理內容。</p>
             </div>
         </div>
 

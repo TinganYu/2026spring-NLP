@@ -21,6 +21,7 @@ from dataclasses import asdict
 
 from medical.service_translate import call_translate_service
 from medical.service_phi import call_phi_service
+from medical.service_speech import speech_to_text
 
 # Config Parser
 config = configparser.ConfigParser()
@@ -65,9 +66,9 @@ def process_diary():
     if request.method == "POST":
         print("[POST] Diary Process POST, received data:", request.form)
         data = request.form
-        date = data["date"] #request.json.get("date")
-        text = data["message"] #request.json.get("text")
-        meta = None #request.json.get("meta")
+        date = data["date"] 
+        text = data["message"] 
+        meta = None 
         result = process_entry(text, meta)  # AnalysisResult dict
         cleaned_result = _remove_data_sources(result)  # 移除 data sources
         print("Cleaned Result:", cleaned_result)
@@ -101,11 +102,16 @@ def process_medical():
         
         result = {
             "original_text": text,
-            "translated_text": text_translated,
+            "translated_text": text_translated['translations'][0]['text'],
             "phi": phi
         }
         print("Medical Result:", result)
         return jsonify(result)
+    
+@app.route("/speech_to_text", methods=["POST"])
+def speech():
+    result = speech_to_text()
+    return jsonify(result)
 
 @app.route("/pii_review", methods=["POST"])  #接收前端送來的內容，並回傳PII審核結果
 def diary_pii_review():
@@ -118,7 +124,7 @@ def diary_pii_review():
 @app.route("/")  #一打開網站要做的事情
 def home():
     db.connect()
-    return render_template("medical.html")
+    return render_template("diary.html")
 
 @app.route("/diary")  #前往情緒日記頁面
 def diary():

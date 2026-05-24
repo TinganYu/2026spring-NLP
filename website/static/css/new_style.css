@@ -82,7 +82,7 @@
 }
 
 /* PII 浮窗 */
-#overlay {
+.overlay {
     display: none;
     position: fixed;
     top: 0;
@@ -94,7 +94,7 @@
     z-index: 1000;
 }
 
-#popup {
+.popup {
     position: fixed;
     top: 50%;
     left: 50%;
@@ -119,7 +119,7 @@
     width: 95%;
 }
 
-#message {
+.textarea {
     box-sizing: border-box;
 
     border: 2px solid #E4EAEF;

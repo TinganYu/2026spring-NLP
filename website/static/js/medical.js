@@ -1,4 +1,4 @@
-var message_tmp = "";
+let message_tmp = "";
 
 $(function(){
     $("#analyze").click(pii_check);
@@ -7,6 +7,10 @@ $(function(){
     });
     $("#pii-redacted").click(() => medicalProcess(message_tmp));
     $("#ignore").click(() => medicalProcess(null));
+    $("#return").click(function() {
+        window.location.replace("/medical");
+    });
+    $("#upload-mp3").click(speechToText);
 
     const langs = $(".language-btn");
     langs.click(function() {
@@ -19,20 +23,19 @@ $(function(){
 });
 
 function pii_check() {
-    var message = $("#message").val();
+    let message = $("#message").val();
 
     //先確認醫囑內容裡是否有PII
     $.post("/pii_review", {text: message}, function (data) {
         if(data.needs_masking == true) {
             const overlay = $("#overlay");
-            overlay.show();//overlay.style.display = "block";
-            //message_tmp = data.redacted_text;
+            overlay.show();
             message_tmp = "";
 
             // 在浮窗中將PII醒目標示
             const popupText = $("#popup_text");
-            var popupHtml = ``;
-            var p = 0;
+            let popupHtml = ``;
+            let p = 0;
             for(const entity of data.entities) {
                 popupHtml += message.slice(p, entity.start);
                 message_tmp += message.slice(p, entity.start);
@@ -46,8 +49,7 @@ function pii_check() {
                 popupHtml += message.slice(p);
                 message_tmp += message.slice(p);
             }
-            console.log(message_tmp);
-            popupText.html(popupHtml);//popupText.innerHTML = popupHtml;
+            popupText.html(popupHtml);
         }
         else
             medicalProcess(null);
@@ -56,12 +58,12 @@ function pii_check() {
 
 function medicalProcess(message) {
     const overlay = $("#overlay");
-    overlay.hide();//overlay.style.display = "none";
+    overlay.hide();
 
     if(!message)
         message = $("#message").val();
 
-    var params = {
+    let params = {
         language: $(".language-btn.select").attr("id"),
         message: message
     };
@@ -78,7 +80,7 @@ function resultShow(data){
     $(".language-btn").hide();
     $(".language-btn.select").show();
 
-    var tableHtml = `
+    let tableHtml = `
     <table>
         <tr>
             <th>標籤</th>
@@ -105,4 +107,16 @@ function resultShow(data){
     tableContainer.html(tableHtml);
 
     // 顯示原文跟翻譯後結果
+    $("#input-col").hide();
+    $("#output-col").show();
+    $("#original-text").val(data.original_text);
+    $("#translated-text").val(data.translated_text);
+}
+
+function speechToText() {
+    $("#speech-overlay").show();
+    $.post("/speech_to_text", {}, function (data) {
+        $("#speech-overlay").hide();
+        $("#message").val(data);
+    });
 }
