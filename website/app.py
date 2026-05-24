@@ -1,3 +1,7 @@
+'''
+https://w3schools.tw/jquery/jquery_dom_set.asp
+jqeury 教學網址
+'''
 import sys
 import os
 # 將 2026-NLP路徑 設為import時搜尋的第一順位
@@ -7,12 +11,16 @@ sys.path.append(
 
 import configparser
 from flask import Flask, request, abort, render_template, url_for, Blueprint, jsonify
+import website.database as db
+
 from diary.processor import process_entry
 from shared.pii import review_pii
-import website.database as db
 from diary.analysis import to_diary_record
 from diary.aggregator import aggregate_weekly_records 
 from dataclasses import asdict
+
+from medical.service_translate import call_translate_service
+from medical.service_phi import call_phi_service
 
 # Config Parser
 config = configparser.ConfigParser()
@@ -55,7 +63,7 @@ def get_weekly_dashboard():
 @app.route("/diary_process", methods=["POST"])  #接收前端送來的日記內容，並回傳分析結果
 def process_diary():
     if request.method == "POST":
-        print("POST!")
+        print("[POST] Diary Process POST, received data:", request.form)
         data = request.form
         date = data["date"] #request.json.get("date")
         text = data["message"] #request.json.get("text")
@@ -72,6 +80,32 @@ def process_diary():
         print("Diary Record View:", diary_record_view)
         
         return jsonify(diary_record_view)
+    
+@app.route("/medical_process", methods=["POST"])  #接收前端送來的醫囑內容，並回傳分析結果
+def process_medical():
+    if request.method == "POST":
+        data = request.form
+        text = data["message"]
+        target_lang = data["language"]
+        
+        text_translated = call_translate_service(text, target_lang)
+        
+        phi, medicine = call_phi_service(text)
+        
+        #給所有phi翻譯成中文，並把翻譯加入
+        for key, value in phi.items():
+            tmp = {"original": value, "translated": []}
+            for i in value:
+                tmp["translated"].append(call_translate_service(i, target_lang)["translations"][0]["text"])
+            phi[key] = tmp
+        
+        result = {
+            "original_text": text,
+            "translated_text": text_translated,
+            "phi": phi
+        }
+        print("Medical Result:", result)
+        return jsonify(result)
 
 @app.route("/pii_review", methods=["POST"])  #接收前端送來的內容，並回傳PII審核結果
 def diary_pii_review():
@@ -84,7 +118,7 @@ def diary_pii_review():
 @app.route("/")  #一打開網站要做的事情
 def home():
     db.connect()
-    return render_template("diary.html")
+    return render_template("medical.html")
 
 @app.route("/diary")  #前往情緒日記頁面
 def diary():

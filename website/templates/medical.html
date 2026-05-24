@@ -26,13 +26,13 @@
                     <img>
                     <h2>醫囑錄入</h2>
                 </div>
-                <h4>使用語音上傳 (.mp3)</h4>
-                <button class="btn" id="upload-mp3">點擊上傳臨床語音檔</button>
+                <h4>使用語音輸入</h4>
+                <button class="btn" id="upload-mp3">點擊開始錄入醫囑內容</button>
                 <h4>或手動輸入醫囑內容</h4>
                 <textarea id="message" name="message" placeholder="請輸入文字……"></textarea> 
                 <div class="row">
-                    <button class="btn" id="translate">翻譯</button>
-                    <button class="btn select" id="analyze">執行安全解析</button>
+                    <button class="btn" id="erase">清除內容</button>
+                    <button class="btn select" id="analyze">翻譯並執行醫囑解析</button>
                 </div>
             </div>
             
@@ -40,15 +40,30 @@
             <div class="column" style="left: 27%; background: #F1F5F9; width: 75%;">
                 <div class="float-row">
                     <h2 style=" display: inline;">目標翻譯語言：</h2>
-                    <button class="btn language-btn select" id="chinese">繁體中文</button>
-                    <button class="btn language-btn" id="vietnamese">Tiếng Việ</button>
-                    <button class="btn language-btn" id="indonesian">Bahasa Indonesia</button>
+                    <button class="btn language-btn select" id="zh-Hant">繁體中文</button>
+                    <button class="btn language-btn" id="vi">Tiếng Việ</button>
+                    <button class="btn language-btn" id="id">Bahasa Indonesia</button>
+                </div>
+                <div class="float-row" id="table-container" style="display: none;"> 
+                    <!-- 表格插入的地方 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 偵測到PII後顯示的浮窗 -->
+        <div class="overlay" id="overlay">
+            <div class="popup" id="popup">
+                <h2>安全攔截：偵測到敏感個資</h2>
+                <p id="popup_text"></p>
+                <div class="row">
+                    <button class="btn" id="ignore">忽略送出</button>
+                    <button class="btn pii-btn" id="pii-redacted">確定遮蔽並解析</button>
                 </div>
             </div>
         </div>
 
         <script src="//unpkg.com/jquery"></script>
-        <script src="{{url_for('static', filename='js/main.js')}}"></script>
+        <script src="{{url_for('static', filename='js/medical.js')}}"></script>
         <script src="{{url_for('static', filename='js/tab.js')}}"></script>
     </body>
 </html>

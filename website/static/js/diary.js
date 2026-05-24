@@ -18,22 +18,27 @@ function pii_check() {
         // 'entities': [{'text': '陳芊羽', 'category': 'Person', 'start': 2, 'end': 5, 'confidence_score': 1.0}], 
         // 'redacted_text': '我是[PERSON-1] 測試'}
         if(data.needs_masking == true) {
-            const overlay = document.getElementById("overlay");
-            overlay.style.display = "block";
-            message_tmp = data.redacted_text;
+            const overlay = $("#overlay");
+            overlay.show();
+            //message_tmp = data.redacted_text;
+            message_tmp = "";
 
             // 在浮窗中將PII醒目標示
-            const popupText = document.getElementById("popup_text");
+            const popupText = $("#popup_text");
             var popupHtml = ``;
             var p = 0;
             for(const entity of data.entities) {
                 popupHtml += message.slice(p, entity.start);
+                message_tmp += message.slice(p, entity.start);
+
                 popupHtml += `<span class="pii-entity">${message.slice(entity.start, entity.end)}</span>`;
+                message_tmp += "▉".repeat(entity.end - entity.start);
+
                 p = entity.end;
             }
             if(p < message.length)
                 popupHtml += message.slice(p);
-            popupText.innerHTML = popupHtml;
+            popupText.html(popupHtml);
         }
         else
             diaryProcess(null);
@@ -41,8 +46,8 @@ function pii_check() {
 }
 
 function diaryProcess(message) {
-    const overlay = document.getElementById("overlay");
-    overlay.style.display = "none";
+    const overlay = $("#overlay");
+    overlay.hide();
 
     var date = $("#date").val();
     if(!message)
@@ -66,8 +71,4 @@ function diaryProcess(message) {
             </div>
         `);*/
     });
-}
-
-function erase_textarea() {
-    $("#message").val("");
 }

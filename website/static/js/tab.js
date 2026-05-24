@@ -1,5 +1,4 @@
 $(function(){
-    $("#analyze").click(diaryProcess);
     $("#erase").click(function() {
         $("#message").val("");
     });
@@ -9,8 +8,8 @@ $(function(){
 });
 
 function switchTab(tab_name) {
-    const nowTab = document.querySelector(".tab.select");
-    if (nowTab.id == tab_name+'-btn')
+    const nowTab = $(".tab.select");
+    if (nowTab.attr("id") == tab_name+'-btn')
         return;
     else
         window.location.replace("/"+tab_name);

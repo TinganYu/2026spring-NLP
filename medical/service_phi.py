@@ -51,6 +51,7 @@ def call_phi_service(text: str) -> dict:
         "Direction": "註記" 
     }
 
+    normal_name = {}
     for entity in phi_response["entities"]:
         azure_cat = entity["category"]
         azure_text = entity["text"]
@@ -60,7 +61,6 @@ def call_phi_service(text: str) -> dict:
             target_key = category_mapping[azure_cat]
             extracted_data[target_key].add(azure_text)
 
-            normal_name = {}
             # 回傳藥名的學術說法
             if target_key == "藥名":
                 normal_name[azure_text] = entity["normalized_text"]
