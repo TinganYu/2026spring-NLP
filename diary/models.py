@@ -11,6 +11,10 @@ class SymptomRecord(TypedDict):
     display: str
     status: str
     severity: int
+    times: List[str]
+    body: List[str] 
+    frequencies: List[str]
+    notes: Dict[str, List[str]]
 
 
 class MedicationRecord(TypedDict):
@@ -18,7 +22,7 @@ class MedicationRecord(TypedDict):
     display: str
     dosages: List[str]
     frequencies: List[str]
-    notes: List[str]
+    notes: Dict[str, List[str]]
     taken: bool # 根據日記內容判定是否有服用（True 表示日記中有記錄/推論為有服用）
 
 
@@ -28,7 +32,7 @@ class DiaryRecord(TypedDict):  # 用來讀取DB內的值，並改成前端需要
     emotion_score: float
     symptoms: List[SymptomRecord]
     medications: List[MedicationRecord]
-    events: List[Dict[str, Any]]
+    # events 已移除，相關關係資料請從 PHI 原始 relations 或 aggregator 的 phi_relations 取得
 
 
 class DiaryEntry(TypedDict, total=False):

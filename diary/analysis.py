@@ -21,7 +21,19 @@ SEVERITY_MAP = {
 def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
     """將 AnalysisResult 轉換為前端與圖表直接可用的統一 DiaryRecord 結構
 
-    這個函式原先放在 `processor.py`，已搬移至此以統一管理 PHI -> 前端格式化邏輯。
+    輸出範例:
+    {
+        date: "2026-05-01",
+        emotion_label: "negative",
+        emotion_score: 0.8,
+        symptoms: [
+            {"key": "headache", "display": "headache", "status": "affirmed", "severity": 2, "times": ["yesterday"], "frequencies": ["everyday"], "notes": {"BodySiteOfCondition": ["head"]}},
+            ],
+        medications: [
+            {"key": "ibuprofen", "display": "ibuprofen", "frequency": "twice a day", "inferred": true},
+            ],
+    } 
+
     """
     phi = result.get("phi", {}) or {}
     entities = phi.get("entities", [])
@@ -61,22 +73,63 @@ def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
             display = ent.get("text") or ""
 
             status = _infer_entity_status(ent)
-
+            times: List[str] = []       # 特別抓出時間
+            body: List[str] = []        # 特別抓出身體部位
+            frequencies: List[str] = [] # 特別抓出頻率
+            notes: Dict[str, List[str]] = {} # 存放所有與該症狀相關的其他 Relation 屬性
+            
             max_severity = 1
             for rel in relations:
-                if rel.get("relation_type") == "QualifierOfCondition":
-                    roles = rel.get("roles", [])
-                    cond_text = _get_role_text(roles, "Condition", "Symptom")
-                    if cond_text == display:
+                roles = rel.get("roles", [])
+                
+                cond_text = _get_role_text(roles, "Condition", "Symptom", "Entity")
+                if cond_text != display:
+                    continue
+
+                rtype = rel.get("relation_type")
+                if rtype == "QualifierOfCondition":
                         qualifier = _get_role_text(roles, "Qualifier")
                         if qualifier and qualifier.lower() in SEVERITY_MAP:
                             max_severity = max(max_severity, SEVERITY_MAP[qualifier.lower()])
+                # 獨立抓取時間
+                elif rtype == "TimeOfCondition": 
+                    val = _get_role_text(roles, "Time", "Date")
+                    if val:
+                        times.append(val)
+                # 獨立抓取身體部位
+                elif rtype == "BodySiteOfCondition":
+                    val = _get_role_text(roles, "BodySite")
+                    if val:
+                        body.append(val)
+
+                # 獨立抓取頻率
+                elif rtype == "FrequencyOfCondition":
+                    val = _get_role_text(roles, "Frequency")
+                    if val:
+                        frequencies.append(val)
+                
+                # 其他屬性 (部位、程度等) 丟進 notes
+                elif rtype:                  
+                    
+                    if rtype not in notes:
+                        notes[rtype] = []
+                    
+                    for role in roles:
+                        role_name = role.get("name")
+                        role_text = role.get("entity_text")
+                        
+                        # 排除掉指向症狀本身的 role
+                        if role_name not in ("Condition", "Symptom", "Entity") and role_text:
+                            notes[rtype].append(role_text)
 
             symptom_records.append(SymptomRecord(
                 key=key,
                 display=display,
                 status=status,
-                severity=max_severity
+                severity=max_severity,
+                times=times,             
+                frequencies=frequencies, 
+                notes=notes
             ))
 
     # 2. 整理 Medications（改為累積劑量/頻率/註記為 list）
@@ -88,12 +141,12 @@ def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
 
             dosages: List[str] = []
             frequencies: List[str] = []
-            notes: List[str] = []
+            notes: Dict[str, List[str]] = {} # 改為字典結構存放其他屬性
 
             for rel in relations:
                 roles = rel.get("roles", [])
                 med_text = _get_role_text(roles, "Medication", "Drug")
-                if med_text != display:
+                if med_text != display: # relation裡存的是text不是normalized_text，所以用display來比對
                     continue
 
                 rtype = rel.get("relation_type")
@@ -105,12 +158,19 @@ def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
                     val = _get_role_text(roles, "Frequency")
                     if val:
                         frequencies.append(val)
-                else:
-                    # 其他和藥物有關的 relation 當作註記保留
-                    role_map = {role.get("name") or "Unknown": role.get("entity_text") or "" for role in roles}
-                    text = _format_relation_text(rtype, role_map)
-                    if text:
-                        notes.append(text)
+                elif rtype:
+                    # 其他和藥物有關的 relation 當作註記保留，結構為 Dict[str, List[str]]，範例 {"RouteOfAdministration": ["口服"], "FormOfMedication": ["錠劑"]}
+                    if rtype not in notes:
+                        notes[rtype] = []
+                    
+                    # 找出該 relation 中，除了「藥物本身」以外的實體文字並塞進 List
+                    for role in roles:
+                        role_name = role.get("name")
+                        role_text = role.get("entity_text")
+                        
+                        # 排除掉指向藥物本身的 role (如 Medication, Drug)，只存屬性值 (如 Route, Form 等)
+                        if role_name not in ("Medication", "Drug") and role_text:
+                            notes[rtype].append(role_text)
 
             # medication 推論為 True 當且僅當 entity 有 assertion 且 status 為 affirmed
             med_status = _infer_entity_status(ent)
@@ -124,29 +184,12 @@ def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
                 taken=taken_flag
             ))
 
-    # 3. 整理 Events 只拿出需要的
-    target_event_types = {
-        "QualifierOfCondition", "TimeOfCondition", "DurationOfCondition",
-        "DosageOfMedication", "FrequencyOfMedication", "TimeOfMedication", "BodySiteOfCondition"
-    }
-    events = []
-    for rel in relations:
-        relation_type = rel.get("relation_type")
-        if relation_type in target_event_types:
-            roles = {role.get("name") or "Unknown": role.get("entity_text") or "" for role in rel.get("roles", [])}
-            events.append({
-                "type": relation_type, # event種類
-                "roles": roles, # role名稱對應的實體文字，例如 {"Condition": "頭痛", "Duration": "三天"}
-                "text": _format_relation_text(relation_type, roles)
-            })
-
     return DiaryRecord(
         date=date,
         emotion_label=result["emotion"]["label"],
         emotion_score=result["emotion"]["score"],
         symptoms=symptom_records,
         medications=medication_records,
-        events=events
     )
 
 ## =====下方是針對PHI分析結果的進階整理功能，提供給月底回顧和看診準備使用=======
@@ -248,29 +291,29 @@ def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
 #     }
 
 # 這個可能沒用可以刪掉，先保留在這裡當作參考
-def _format_relation_text(relation_type: str, roles: Dict[str, str]) -> str:
-    # 把 relation 轉成中文可讀句子，方便前端顯示或報告使用
-    if relation_type == "TimeOfCondition":
-        condition = roles.get("Condition") or roles.get("Symptom") or roles.get("Entity") or "某個症狀"
-        time_value = roles.get("Time") or roles.get("Date") or "某個時間"
-        return f"{condition} 發生在 {time_value}"
+# def _format_relation_text(relation_type: str, roles: Dict[str, str]) -> str:
+#     # 把 relation 轉成中文可讀句子，方便前端顯示或報告使用
+#     if relation_type == "TimeOfCondition":
+#         condition = roles.get("Condition") or roles.get("Symptom") or roles.get("Entity") or "某個症狀"
+#         time_value = roles.get("Time") or roles.get("Date") or "某個時間"
+#         return f"{condition} 發生在 {time_value}"
 
-    if relation_type == "DurationOfCondition":
-        condition = roles.get("Condition") or roles.get("Symptom") or "某個症狀"
-        duration = roles.get("Duration") or "某段時間"
-        return f"{condition} 持續 {duration}"
+#     if relation_type == "DurationOfCondition":
+#         condition = roles.get("Condition") or roles.get("Symptom") or "某個症狀"
+#         duration = roles.get("Duration") or "某段時間"
+#         return f"{condition} 持續 {duration}"
 
-    if relation_type == "DosageOfMedication":
-        medication = roles.get("Medication") or roles.get("Drug") or "某個藥物"
-        dosage = roles.get("Dosage") or "某個劑量"
-        return f"{medication} 的劑量是 {dosage}"
+#     if relation_type == "DosageOfMedication":
+#         medication = roles.get("Medication") or roles.get("Drug") or "某個藥物"
+#         dosage = roles.get("Dosage") or "某個劑量"
+#         return f"{medication} 的劑量是 {dosage}"
 
-    if relation_type == "FrequencyOfMedication":
-        medication = roles.get("Medication") or roles.get("Drug") or "某個藥物"
-        frequency = roles.get("Frequency") or "某個頻率"
-        return f"{medication} 的服用頻率是 {frequency}"
+#     if relation_type == "FrequencyOfMedication":
+#         medication = roles.get("Medication") or roles.get("Drug") or "某個藥物"
+#         frequency = roles.get("Frequency") or "某個頻率"
+#         return f"{medication} 的服用頻率是 {frequency}"
 
-    return f"{relation_type}: {', '.join(f'{k}={v}' for k, v in roles.items())}"
+#     return f"{relation_type}: {', '.join(f'{k}={v}' for k, v in roles.items())}"
 
 # def _build_visit_summary(
 #     symptom_or_sign: List[Dict[str, Any]],
