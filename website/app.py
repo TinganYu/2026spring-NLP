@@ -57,7 +57,7 @@ def get_weekly_dashboard():
     dashboard_payload = aggregate_weekly_records(analysis_records)
     return jsonify(dashboard_payload)
 
-#接收前端送來的日記內容，並回傳分析結果
+# 接收前端送來的日記內容，並回傳分析結果
 @app.route("/diary_process", methods=["POST"])
 def process_diary():
     if request.method == "POST":
@@ -69,15 +69,52 @@ def process_diary():
         text = data["message"] 
         meta = None 
         
+        # 取得資料並處理
         result = process_entry(text, meta)  # AnalysisResult dict
         cleaned_result = _remove_data_sources(result)  # 移除 data sources
+        diary_record_view = to_diary_record(result, date)
+        diary_record_view["symptoms"] = [
+            symptom 
+            for symptom in diary_record_view["symptoms"] 
+            if symptom["status"] != "negated" and symptom["status"] != "other_person"]
         
-        # 同時轉成 DiaryRecord 回傳給前端
-        diary_record_view = to_diary_record(result, date) #(meta or {}).get("date", ""))
+        # 翻譯資料以供顯示
+        target = "zh-Hant"
+        for symptom in diary_record_view["symptoms"]:   # 翻譯症狀
+            # 如果沒有 key 就顯示 display，只保留翻譯結果
+            if not symptom["key"]:
+                symptom["key"] = symptom["display"]
+            del symptom["display"]
+            
+            symptom["key"] = call_translate_service(symptom["key"], target)['translations'][0]['text']
+            
+            # 翻譯所有時間跟頻率，只保留翻譯結果
+            for i in range(len(symptom['times'])):
+                symptom['times'][i] = call_translate_service(symptom['times'][i], target)['translations'][0]['text']
+                
+            for i in range(len(symptom['frequencies'])):
+                symptom['frequencies'][i] = call_translate_service(symptom['frequencies'][i], target)['translations'][0]['text']
+        
+        for medication in diary_record_view["medications"]: # 翻譯用藥
+            # 如果沒有 key 就顯示 display，保留原文跟翻譯結果
+            if not medication["key"]:
+                medication["key"] = medication["display"]
+            del medication["display"]
+            
+            # [0]: 原文, [1]: 翻譯結果
+            medication["key"] = [medication["key"]]
+            medication["key"].append(call_translate_service(medication["key"][0], target)['translations'][0]['text'])
+            
+            # 翻譯所有時間跟頻率，只保留翻譯結果
+            for i in range(len(medication['dosages'])):
+                medication['dosages'][i] = call_translate_service(medication['dosages'][i], target)['translations'][0]['text']
+                
+            for i in range(len(medication['frequencies'])):
+                medication['frequencies'][i] = call_translate_service(medication['frequencies'][i], target)['translations'][0]['text']
         
         # 存 diary data 到 DB
-        db.diary_insert(cleaned_result['entry'], diary_record_view)    
-        print("Diary Record View:", diary_record_view)
+        db.diary_insert(cleaned_result['entry'], diary_record_view)
+        print("Diary Record View:", diary_record_view)    
         return jsonify(diary_record_view)
 
 #接收前端送來的醫囑內容，並回傳分析結果
@@ -112,7 +149,8 @@ def process_medical():
         }
         print("Medical Result:", result)
         return jsonify(result)
-    
+ 
+# 執行語音錄入並回傳錄入文字   
 @app.route("/speech_to_text", methods=["POST"])
 def speech():
     result = speech_to_text()
@@ -135,8 +173,7 @@ def diary_pii_review():
 #一打開網站要做的事情
 @app.route("/")
 def home():
-    db.connect()
-    print("[GET] Home GET, connected to database")
+    print("[GET] Home GET")
     return render_template("diary.html")
 
 #前往情緒日記頁面
@@ -155,4 +192,5 @@ def graph():
     return render_template("graph.html")
 
 if __name__ == "__main__":
+    db.connect()
     app.run()
