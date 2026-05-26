@@ -71,34 +71,11 @@ def aggregate_weekly_records(records: List[AnalysisResult]) -> Dict[str, Any]:
         elif trend_value < -0.1:
             emotion_stats["trend_direction"] = "declining"
 
-    # 提取 PHI 關係（從原始 AnalysisResult），達成跨日的 PHI 關係分析
-    all_relations = []
-    for record in records:
-        phi_summary = record.get("phi") or {}
-        for relation in phi_summary.get("relations", []):
-            all_relations.append(
-                {
-                    "relation_type": relation.get("relation_type"),
-                    "roles": relation.get("roles", []),
-                    "date": record["entry"]["meta"].get("date"), # 加入日期資訊
-                }
-            )
-
-    grouped_relations = defaultdict(list) # 把所有的relation資料合併，根據 relation_type 分組
-    for relation in all_relations:
-        grouped_relations[relation.get("relation_type", "Unknown")].append(relation)
-
-    phi_relations = [
-        {"relation_type": rel_type, "occurrences": len(items), "examples": items[:2]} # 取前兩筆作為示例
-        for rel_type, items in sorted(grouped_relations.items(), key=lambda item: len(item[1]), reverse=True)[:5] # 取前5種最常見的關係類型
-    ]
-
     return {
         "week_start": diary_records[0]["date"] if diary_records else None,
         "week_end": diary_records[-1]["date"] if diary_records else None,
         "record_count": len(diary_records),
-        "emotion_statistics": emotion_stats,
-        "phi_relations": phi_relations,
+        "emotion_statistics": emotion_stats, # 情緒趨勢統計
         **dashboard, # 包含所有圖表 payload (** 把dashboard dict裡的key/value攤平加入/合併最終回傳的dict)
     }
 

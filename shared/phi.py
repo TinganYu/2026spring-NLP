@@ -22,7 +22,7 @@ class HealthEntityItem(TypedDict, total=False):
     subcategory: Optional[str]
     offset: Optional[int]
     confidence_score: Optional[float]
-    data_sources: List[dict]
+    # data_sources: List[dict]
     assertion: Optional[dict]
 
 class HealthRelationItem(TypedDict, total=False):
@@ -49,10 +49,10 @@ def _get_client() -> TextAnalyticsClient:
 
 def _to_entity_item(entity: Any) -> HealthEntityItem:
     """將 Azure HealthcareEntity 物件轉換為字典"""
-    data_sources = [
-        {"entity_id": src.entity_id, "name": src.name}
-        for src in (entity.data_sources or [])
-    ]
+    # data_sources = [
+    #     {"entity_id": src.entity_id, "name": src.name}
+    #     for src in (entity.data_sources or [])
+    # ]
     assertion = None
     if entity.assertion:
         assertion = {
@@ -67,7 +67,7 @@ def _to_entity_item(entity: Any) -> HealthEntityItem:
         "subcategory": entity.subcategory,
         "offset": entity.offset,
         "confidence_score": entity.confidence_score,
-        "data_sources": data_sources,# 這是各種醫療專屬編號(到時候可能沒用就刪了)
+        # "data_sources": data_sources,# 這是各種醫療專屬編號(到時候可能沒用就刪了)
         "assertion": assertion,
     }
 
