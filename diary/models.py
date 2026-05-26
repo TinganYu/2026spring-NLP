@@ -14,7 +14,7 @@ class SymptomRecord(TypedDict):
     times: List[str]
     body: List[str] 
     frequencies: List[str]
-    notes: Dict[str, List[str]]
+    # notes: Dict[str, List[str]]
 
 
 class MedicationRecord(TypedDict):
@@ -22,7 +22,7 @@ class MedicationRecord(TypedDict):
     display: str
     dosages: List[str]
     frequencies: List[str]
-    notes: Dict[str, List[str]]
+    # notes: Dict[str, List[str]]
     taken: bool # 根據日記內容判定是否有服用（True 表示日記中有記錄/推論為有服用）
 
 

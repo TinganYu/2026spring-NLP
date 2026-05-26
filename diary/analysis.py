@@ -108,19 +108,19 @@ def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
                     if val:
                         frequencies.append(val)
                 
-                # 其他屬性 (部位、程度等) 丟進 notes
-                elif rtype:                  
+                # # 其他屬性 (部位、程度等) 丟進 notes
+                # elif rtype:                  
                     
-                    if rtype not in notes:
-                        notes[rtype] = []
+                #     if rtype not in notes:
+                #         notes[rtype] = []
                     
-                    for role in roles:
-                        role_name = role.get("name")
-                        role_text = role.get("entity_text")
+                #     for role in roles:
+                #         role_name = role.get("name")
+                #         role_text = role.get("entity_text")
                         
-                        # 排除掉指向症狀本身的 role
-                        if role_name not in ("Condition", "Symptom", "Entity") and role_text:
-                            notes[rtype].append(role_text)
+                #         # 排除掉指向症狀本身的 role
+                #         if role_name not in ("Condition", "Symptom", "Entity") and role_text:
+                #             notes[rtype].append(role_text)
 
             symptom_records.append(SymptomRecord(
                 key=key,
@@ -129,7 +129,7 @@ def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
                 severity=max_severity,
                 times=times,             
                 frequencies=frequencies, 
-                notes=notes
+                # notes=notes
             ))
 
     # 2. 整理 Medications（改為累積劑量/頻率/註記為 list）
@@ -158,19 +158,19 @@ def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
                     val = _get_role_text(roles, "Frequency")
                     if val:
                         frequencies.append(val)
-                elif rtype:
-                    # 其他和藥物有關的 relation 當作註記保留，結構為 Dict[str, List[str]]，範例 {"RouteOfAdministration": ["口服"], "FormOfMedication": ["錠劑"]}
-                    if rtype not in notes:
-                        notes[rtype] = []
+                # elif rtype:
+                #     # 其他和藥物有關的 relation 當作註記保留，結構為 Dict[str, List[str]]，範例 {"RouteOfAdministration": ["口服"], "FormOfMedication": ["錠劑"]}
+                #     if rtype not in notes:
+                #         notes[rtype] = []
                     
-                    # 找出該 relation 中，除了「藥物本身」以外的實體文字並塞進 List
-                    for role in roles:
-                        role_name = role.get("name")
-                        role_text = role.get("entity_text")
+                #     # 找出該 relation 中，除了「藥物本身」以外的實體文字並塞進 List
+                #     for role in roles:
+                #         role_name = role.get("name")
+                #         role_text = role.get("entity_text")
                         
-                        # 排除掉指向藥物本身的 role (如 Medication, Drug)，只存屬性值 (如 Route, Form 等)
-                        if role_name not in ("Medication", "Drug") and role_text:
-                            notes[rtype].append(role_text)
+                #         # 排除掉指向藥物本身的 role (如 Medication, Drug)，只存屬性值 (如 Route, Form 等)
+                #         if role_name not in ("Medication", "Drug") and role_text:
+                #             notes[rtype].append(role_text)
 
             # medication 推論為 True 當且僅當 entity 有 assertion 且 status 為 affirmed
             med_status = _infer_entity_status(ent)
@@ -180,7 +180,7 @@ def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
                 display=display,
                 dosages=dosages,
                 frequencies=frequencies,
-                notes=notes,
+                # notes=notes,
                 taken=taken_flag
             ))
 
