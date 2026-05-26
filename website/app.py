@@ -13,11 +13,12 @@ from diary.processor import process_entry
 from shared.pii import review_pii
 from diary.analysis import to_diary_record
 from diary.aggregator import aggregate_weekly_records 
-from dataclasses import asdict
+from diary.groq import summarize_health_trend, build_weekly_groq_payload
 
 from medical.service_translate import call_translate_service
 from medical.service_phi import call_phi_service
 from medical.service_speech import speech_to_text
+
 
 # Config Parser
 config = configparser.ConfigParser()
@@ -28,15 +29,6 @@ UPLOAD_FOLDER = "website"
 app = Flask(__name__)
 app.json.sort_keys = False
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-
-def _remove_data_sources(obj): # 因為PHI提供的data sources 實在是太多了，看得有點花。回傳時就先不加入這個欄位，但是看DB要不要存囉
-    """遞迴移除所有巢狀結構中的 data_sources 欄位，但保留其他資料。"""
-    if isinstance(obj, dict):
-        return {k: _remove_data_sources(v) for k, v in obj.items() if k != "data_sources"}
-    elif isinstance(obj, list):
-        return [_remove_data_sources(item) for item in obj]
-    else:
-        return obj
 
 # @app.route("/api/entity-mapping/<entity_id>", methods=["GET"]) # 之後如果有做需要entity標籤的東西才會需要，請無視
 # def get_entity_mapping(entity_id):
@@ -55,7 +47,16 @@ def get_weekly_dashboard():
     
     # 直接聚合生成圖表
     dashboard_payload = aggregate_weekly_records(analysis_records)
-    return jsonify(dashboard_payload)
+    groq_payload = build_weekly_groq_payload(dashboard_payload)
+    ai_summary = summarize_health_trend(groq_payload)
+
+    print("[GET] Weekly Dashboard Summary:")
+    print(ai_summary)
+
+    return jsonify({
+        "weekly_dashboard": dashboard_payload,
+        "groq_summary": ai_summary,
+    })
 
 # 接收前端送來的日記內容，並回傳分析結果
 @app.route("/diary_process", methods=["POST"])
@@ -71,7 +72,6 @@ def process_diary():
         
         # 取得資料並處理
         result = process_entry(text, meta)  # AnalysisResult dict
-        cleaned_result = _remove_data_sources(result)  # 移除 data sources
         diary_record_view = to_diary_record(result, date)
         diary_record_view["symptoms"] = [
             symptom 
@@ -113,7 +113,7 @@ def process_diary():
                 medication['frequencies'][i] = call_translate_service(medication['frequencies'][i], target)['translations'][0]['text']
         
         # 存 diary data 到 DB
-        db.diary_insert(cleaned_result['entry'], diary_record_view)
+        db.diary_insert(text, diary_record_view)
         print("Diary Record View:", diary_record_view)    
         return jsonify(diary_record_view)
 

@@ -5,7 +5,6 @@
 import configparser
 import json
 import os
-from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 import requests
 
@@ -17,21 +16,31 @@ def _get_setting(section: str, key: str, env_name: str, default: str = None) -> 
     return value.strip() if isinstance(value, str) else value
 
 _GROQ_API_KEY = _get_setting("Groq", "GROQ_API_KEY", "GROQ_API_KEY")
-_GROQ_MODEL = _get_setting("Groq", "MODEL", "GROQ_MODEL", "llama-3.1-70b-versatile")
+_GROQ_MODEL = _get_setting("Groq", "MODEL", "GROQ_MODEL", "llama-3.3-70b-versatile")
 _GROQ_BASE_URL = _get_setting("Groq", "BASE_URL", "GROQ_BASE_URL", "https://api.groq.com/openai/v1")
 
-@dataclass
-class GroqSummaryResult:
-    prompt: str
-    summary: str
-    raw_response: Dict[str, Any]
 
 
 def _build_messages(trend_json: Dict[str, Any], instruction: str = None) -> List[Dict[str, str]]:
     instruction_text = instruction or (
-        "你是一位專業且溫暖的健康教練。請根據使用者過去 7 天的情緒、症狀、用藥與 PHI 資料，"
-        "總結情緒趨勢，指出情緒與症狀之間可能的關聯，並用繁體中文輸出條列式重點。"
-    )
+        "## 角色與定位\n"
+        "你是一位溫暖、貼心且專業的個人健康AI教練。你的任務是解讀使用者過去一週的健康數據，並提供日常關懷與建議。\n\n"
+        
+        "## 輸出格式嚴格規範（違者重罰）\n"
+        "1. 必須完全使用【繁體中文（台灣）】輸出。\n"
+        "2. 只能輸出溫暖、口語化的【白話文文字】。這是一封寫給使用者的信，不是工程報告。\n"
+        "3. 絕對禁止輸出任何 JSON、Markdown 表格、程式碼區塊（如 ```json）或 API 欄位名稱（例如不要寫出 'emotion_score'、'trend_direction' 等字眼）。\n"
+        "4. 採用親切的條列式重點，字數控制在 300-400 字之間，排版要舒適易讀。\n\n"
+        
+        "## 內容解讀重點\n"
+        "- 【情緒與趨勢】：用白話解釋情緒起伏（例如：倒退、漸入佳境、穩定），並給予情緒上的同理（如：『這週辛苦了』）。\n"
+        "- 【症狀觀察】：指出明顯的症狀變化或持續存在的症狀（例如：『我注意到你這週頭痛的頻率增加了』）。\n"
+        "- 【症狀與情緒關聯】：如果資料中顯示某些症狀與情緒變化有關聯，請用白話說明（例如：『看起來每當你感到心情不好時，睡眠品質就會變差...』）。\n"
+        "- 【症狀與用藥關聯】：觀察數據中症狀與用藥的發生頻率，找出潛在關聯（例如：『我注意到你每次偏頭痛時，似乎都伴隨著睡眠不足...』）。\n"
+        "- 【行動指引】：給出 1~2 個溫暖、可行的小建議（例如：多喝水、提早半小時睡覺），不要給予嚴肅的醫療診斷。\n\n"
+        
+        "## 語氣範例\n"
+        "『嗨！這週辛苦囉。看了一下你這幾天的紀錄，我發現前幾天你的心情稍微有點悶悶的，不過到了週末有明顯好轉喔！...』"    )
 
     return [
         {
@@ -49,7 +58,7 @@ def summarize_health_trend(
     trend_json: Dict[str, Any],
     instruction: str = None,
     model: Optional[str] = None,
-) -> GroqSummaryResult:
+) -> str:
     """Use Groq to turn structured health data into a natural-language summary."""
     if not _GROQ_API_KEY:
         raise RuntimeError("Groq API Key 未設定，請檢查 config.ini 或環境變數。")
@@ -83,11 +92,29 @@ def summarize_health_trend(
     if choices:
         summary = choices[0].get("message", {}).get("content", "") or ""
 
-    return GroqSummaryResult(
-        prompt=json.dumps(trend_json, ensure_ascii=False),
-        summary=summary,
-        raw_response=result,
-    )
+    return summary
+
+
+
+
+
+
+def build_weekly_groq_payload(weekly_payload: Dict[str, Any]) -> Dict[str, Any]:
+    """將週報聚合結果整理成 Groq 的輸入 payload，避免把完整 dashboard 直接塞進 prompt。"""
+    return {
+        "week_start": weekly_payload.get("week_start"),
+        "week_end": weekly_payload.get("week_end"),
+        "record_count": weekly_payload.get("record_count", 0),
+        "emotion_statistics": weekly_payload.get("emotion_statistics", {}),
+        "emotion_line_chart": weekly_payload.get("emotion_line_chart", {}),
+        "symptom_frequency_chart": weekly_payload.get("symptom_frequency_chart", {}),
+        "medication_frequency_chart": weekly_payload.get("medication_frequency_chart", {}),
+        "cooccurrence_chart": weekly_payload.get("cooccurrence_chart", {}),
+        "symptom_timeline": weekly_payload.get("symptom_timeline", {}),
+        "medication_timeline": weekly_payload.get("medication_timeline", {}),
+        "emotion_heatmap_calendar": weekly_payload.get("emotion_heatmap_calendar", {}),
+        "cooccurrence_heatmap": weekly_payload.get("cooccurrence_heatmap", {}),
+    }
 
 
 if __name__ == "__main__":
@@ -101,4 +128,4 @@ if __name__ == "__main__":
         ],
     }
     out = summarize_health_trend(sample)
-    print(out.summary)
+    print(out)

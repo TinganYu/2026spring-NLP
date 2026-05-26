@@ -12,9 +12,9 @@ def disconnect():
     client.close()
     return
 
-def diary_insert(entry, diary_record):
+def diary_insert(text, diary_record):
     insert_data = diary_record.copy()
-    insert_data["text"] = entry["text"]
+    insert_data["text"] = text
     #alloc_tmp = {'name':tmp,'chr1':c[0]['_id'],'chr2':c[1]['_id'],'chr3':c[2]['_id']}
     db.diary.insert_one(insert_data)
     print("[DATABASE] Inserted diary record complete.")
