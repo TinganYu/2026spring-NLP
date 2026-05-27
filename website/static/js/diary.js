@@ -15,6 +15,10 @@ $(function(){
     });
 
     $("#ignore").click(() => diaryProcess(null));   // 直接分析
+
+    // 歷史紀錄
+    $("#history-btn").click(historyShow);
+    $("#history-close").click(historyHide);
 });
 
 // PII檢測
@@ -182,7 +186,7 @@ function resultShow(data) {
     // 新增 用藥紀錄 結果顯示行
     if (data.medications.length > 0) {
         htmlContent += `
-        <div class="float-row">
+        <div class="float-row" style="display: flex; flex-direction: column;">
             <p>用藥紀錄</p>`;
 
             // 以每個用藥為一行顯示
@@ -226,5 +230,36 @@ function resultClean() {
     resultCol.html(`
         <div class="float-row">
             <h2 style="display: inline;">當日情緒語意分析</h2>
+            <button class="btn" id="history-btn">歷史紀錄</button>
         </div>`);
+    $("#history-btn").click(historyShow);
+}
+
+// 顯示歷史紀錄右欄，並加入每個紀錄的按鈕
+function historyShow(){ //考慮到疼痛指數修改，也許data要留id
+    $("#history-overlay").show();
+
+    // 從後端取得歷史紀錄
+    $.post("/history_get", {class: "diary"} , function (data) {
+        let history_col = $("#history-col");
+
+        // 
+        for (const d of data){
+            const button = $(`<button class="history-block"></button>`);
+            button.html(`
+                <p>${d.date}</p>
+                <p class="history-text">${d.text}</p>`);
+
+            button.click(function() { 
+                historyHide();
+                resultShow(d);
+            });
+
+            history_col.append(button);
+        }
+    });
+}
+
+function historyHide(){
+    $("#history-overlay").hide();
 }

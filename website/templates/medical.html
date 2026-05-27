@@ -21,7 +21,7 @@
         <!-- 頁面主體 -->
         <div class="row" id="main">
             <!-- 左欄 -->
-            <div class="main-column" style="width: 25%;" id="input-col">
+            <div class="main-column" style="width: 25%; left:0" id="input-col">
                 <div class="row">
                     <img>
                     <h2>醫囑錄入</h2>
@@ -36,7 +36,7 @@
                 </div>
             </div>
             <!-- 結果顯示頁面(左欄) -->
-            <div class="main-column" style="width: 25%; display: none;" id="output-col">
+            <div class="main-column" style="width: 25%; left:0; display: none;" id="output-col">
                 <h2>醫囑錄入</h2>
                 <h4>原始醫囑</h4>
                 <textarea id="original-text" class="textarea" readonly></textarea> 
@@ -46,7 +46,7 @@
             </div>
             
             <!-- 結果顯示頁面 -->
-            <div class="main-column" style="left: 27%; background: #F1F5F9; width: 75%;">
+            <div class="main-column" id="result-col">
                 <div class="float-row">
                     <h2 style=" display: inline;">目標翻譯語言：</h2>
                     <button class="btn language-btn select" id="zh-Hant">繁體中文</button>
@@ -77,6 +77,17 @@
                 <h2>語音錄入中</h2>
                 <p>您現在可以開始說話。</p>
                 <p>當您暫停幾秒後，我們會關閉此浮窗自動結束語音輸入並整理內容。</p>
+            </div>
+        </div>
+
+        <!-- 歷史紀錄側欄-->
+        <div class="overlay" id="history-overlay">
+            <div class="main-column" id="history-col">
+                <div class="row">
+                    <img>
+                    <h2>歷史紀錄(情緒日記)</h2>
+                    <button id="history-close">×</button>
+                </div>
             </div>
         </div>
 

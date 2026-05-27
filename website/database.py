@@ -29,9 +29,9 @@ def diary_find(select_dict = None):
     # select_dict: 尋找符合哪些條件的資料
     # 沒有設定條件就回傳所有資料
     if not select_dict:
-        result = db.diary.find()
+        result = db.diary.find({}, {"_id": 0})
     else:
-        result = db.diary.find(select_dict)
+        result = db.diary.find(select_dict, {"_id": 0})
         
     print(f"[DATABASE] Select diary record with Condition: {select_dict}.")
     return result
@@ -40,5 +40,14 @@ def medical_insert():
     #alloc_tmp = {'name':tmp,'chr1':c[0]['_id'],'chr2':c[1]['_id'],'chr3':c[2]['_id']}
     return
 
-def medical_find():
-    return
+def medical_find(select_dict = None):
+    # select_dict: 尋找符合哪些條件的資料
+    # 沒有設定條件就回傳所有資料
+    if not select_dict:
+        result = db.medical.find({}, {"_id": 0})
+    else:
+        result = db.medical.find(select_dict, {"_id": 0})
+        
+    print(f"[DATABASE] Select medical record with Condition: {select_dict}.")
+    print(result)
+    return result

@@ -170,6 +170,27 @@ def diary_pii_review():
     print("PII Review Result:", review)
     return jsonify(review)
 
+@app.route("/history_get", methods=["POST"])
+def db_select():
+    print("[POST] History Get POST, received data:", request.form)
+    
+    # 取出前端傳來的資料
+    text = request.form
+    database = text["class"]
+
+    # 搜尋對應 database 中的所有資料
+    if database == "diary":
+        # 資料按照日期
+        result = db.diary_find()
+        result.sort("date",-1)
+    elif database == "medical":
+        result = db.medical_find()
+    else:
+        return None
+    
+    result = list(result)
+    return jsonify(result)
+
 #一打開網站要做的事情
 @app.route("/")
 def home():

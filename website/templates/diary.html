@@ -21,7 +21,7 @@
         <!-- 頁面主體 -->
         <div class="row" id="main">
             <!-- 左欄 -->
-            <div class="main-column" style="width: 25%;">
+            <div class="main-column" style="width: 25%; left:0">
                 <div class="row">
                     <img>
                     <h2>新增日記記錄</h2>
@@ -37,9 +37,10 @@
             </div>
             
             <!-- 結果顯示頁面 -->
-            <div class="main-column" id="result-col" style="left: 27%; background: #F1F5F9; width: 75%; height: 100%; overflow-y: auto;">
+            <div class="main-column" id="result-col">
                 <div class="float-row">
                     <h2 style="display: inline;">當日情緒語意分析</h2>
+                    <button class="btn" id="history-btn">歷史紀錄</button>
                 </div>
             </div>
         </div>
@@ -52,6 +53,17 @@
                 <div class="row">
                     <button class="btn" id="ignore">忽略送出</button>
                     <button class="btn pii-btn" id="pii-redacted">確定遮蔽並解析</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 歷史紀錄側欄-->
+        <div class="overlay" id="history-overlay">
+            <div class="main-column" id="history-col">
+                <div class="row">
+                    <img>
+                    <h2>歷史紀錄(情緒日記)</h2>
+                    <button id="history-close">×</button>
                 </div>
             </div>
         </div>
