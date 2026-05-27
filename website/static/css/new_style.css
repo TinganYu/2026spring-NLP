@@ -2,6 +2,23 @@
     box-sizing: border-box;
 }
 
+button {
+    font-size: clamp(4px, 1.5vw, 16px);
+}
+
+h2{
+    font-size: 22px;
+    font-weight: bold;
+    margin: 0;
+}
+
+h4 {
+    font-size: 16px;
+    font-weight: bold;
+    color: #64748B;
+    margin: 0;
+}
+
 html, body {
     margin: 0;
     padding: 0;
@@ -63,7 +80,10 @@ html, body {
     top: 10vh;
     height: 90vh;
 
-    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    gap: 10px;
 }
 
 #result-col {
@@ -75,9 +95,11 @@ html, body {
 
 /* tab 跟 button 系列 */
 .tab {
-    border: none;
+    border: 2px solid transparent;
     border-radius: 5px;
     background-color: #1E293B;
+
+    height: 5vh;
 
     font-size: 16px;
     color: #8D9CB0;
@@ -88,29 +110,30 @@ html, body {
 .btn {
     border: 2px solid #E4EAEF;
     border-radius: 5px;
-    font-size: 16px;
+    
     color: #64748B;
     cursor: pointer;
 }
 
 .language-btn {
-    border-radius: 10px;
+    border-radius: 15px;
+    height: 80%;
 }
 
 .select {
-    border: none;
+    border: 2px solid transparent;
     background-color: #0D9488;
     color: white;
 }
 
 .diary-btn {
-    border: none;
+    border: 2px solid transparent;
     background-color: #F59E0B;
     color: white;
 }
 
 .pii-btn {
-    border: none;
+    border: 2px solid transparent;
     background-color: #EA580C;
     color: white;
 }
@@ -119,6 +142,10 @@ html, body {
     border: none;
     background: none;
     padding: 0;
+}
+
+.right-bown-btn {
+    height: 100%;
 }
 
 /* PII 浮窗 */
@@ -144,14 +171,19 @@ html, body {
     padding: 15px;
     border-radius: 10px;
     z-index: 1001;
-    width: 300px;
+
+    width: 40%;
 }
 
 .pii-entity {
     font-weight: bold;
     background: #FEF08A;
+
     border-radius: 5px;
+    box-shadow: 0 2px 0 #d97706;
+
     padding: 2px 6px;
+    margin: 0 2px;
 }
 
 /* 歷史紀錄 */
@@ -170,9 +202,13 @@ html, body {
 }
 
 #history-close {
-    width: 15px;
-    height: 15px;
+    border: none;
+    width: 20px;
+    height: 20px;
+    background: white;
+
     color: #94A3B8;
+    font-size: 20px;
 }
 
 .history-block {
@@ -215,7 +251,7 @@ html, body {
 .label {
     background: #ebebeb;
     color: #a0a09e;
-    border-radius: 10px;
+    border-radius: 15px;
     padding: 2px 6px;
     width: fit-content;
 }
@@ -263,7 +299,8 @@ html, body {
     border-radius: 5px;
 
     background-color: #f8f8f8;
-    font-size: 18px;
+    font-size: 16px;
+    padding: 5px;
 
     width: 100%;
     resize: none;

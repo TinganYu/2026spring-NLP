@@ -21,16 +21,16 @@
         <!-- 頁面主體 -->
         <div class="row" id="main">
             <!-- 左欄 -->
-            <div class="main-column" style="width: 25%; left:0">
+            <div class="main-column" style="width: 25%; left:0;">
                 <div class="row">
                     <img>
                     <h2>新增日記記錄</h2>
                 </div>
-                <input type="date" id="date" name="date">
-                <textarea id="message" name="message" placeholder="請輸入文字……" class="textarea"></textarea> 
-                <div class="row">
-                    <button class="btn" id="erase">清除內容</button>
-                    <button class="btn diary-btn" id="analyze">儲存並分析</button>
+                <input type="date" id="date" name="date" style="width: 100%;">
+                <textarea id="message" name="message" placeholder="請輸入文字……" class="textarea" style="height: 90%;"></textarea> 
+                <div class="row" style="height: 10%; gap:10px;">
+                    <button class="btn right-bown-btn" id="erase" style="width: 40%;">清除內容</button>
+                    <button class="btn diary-btn right-bown-btn" id="analyze" style="width: 60%;">儲存並分析</button>
                 </div>
                 <div id="analyzeComplete">
                 </div>
@@ -50,9 +50,9 @@
             <div class="popup" id="popup">
                 <h2>安全攔截：偵測到敏感個資</h2>
                 <p id="popup_text"></p>
-                <div class="row">
-                    <button class="btn" id="ignore">忽略送出</button>
-                    <button class="btn pii-btn" id="pii-redacted">確定遮蔽並解析</button>
+                <div class="row" style="width:100%; height:40px; gap:10px;">
+                    <button class="btn" id="ignore" style="width:40%; height:100%;">忽略送出</button>
+                    <button class="btn pii-btn" id="pii-redacted" style="width:60%; height:100%;">確定遮蔽並解析</button>
                 </div>
             </div>
         </div>

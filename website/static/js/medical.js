@@ -3,14 +3,6 @@ let message_tmp = "";   // 暫存 PII 遮蔽過後的結果
 $(function(){
     // 左欄按鈕(輸入狀態)
     $("#upload-mp3").click(speechToText);
-    $("#analyze").click(pii_check);
-    $("#erase").click(function() {
-        $("#message").val("");
-    });
-
-    // PII浮窗按鈕
-    $("#pii-redacted").click(() => medicalProcess(message_tmp));
-    $("#ignore").click(() => medicalProcess(null));
 
     // 左欄按鈕(輸出狀態)
     $("#return").click(function() {
@@ -28,44 +20,8 @@ $(function(){
     });
 });
 
-// PII檢測
-function pii_check() {
-    let message = $("#message").val();
-
-    //先確認醫囑內容裡是否有PII
-    $.post("/pii_review", {text: message}, function (data) {
-        if(data.needs_masking == true) {    //偵測到 PII
-            // 顯示浮窗
-            const overlay = $("#overlay");
-            overlay.show();
-            message_tmp = "";
-
-            // 在浮窗中將PII醒目標示
-            const popupText = $("#popup_text");
-            let popupHtml = ``;
-            let p = 0;
-            for(const entity of data.entities) {
-                popupHtml += message.slice(p, entity.start);
-                message_tmp += message.slice(p, entity.start);
-
-                popupHtml += `<span class="pii-entity">${message.slice(entity.start, entity.end)}</span>`;
-                message_tmp += "▉".repeat(entity.end - entity.start);
-
-                p = entity.end;
-            }
-            if(p < message.length) {
-                popupHtml += message.slice(p);
-                message_tmp += message.slice(p);
-            }
-            popupText.html(popupHtml);
-        }
-        else    //沒有偵測到PII，直接開始分析
-            medicalProcess(null);
-    });
-}
-
 // 執行醫囑分析
-function medicalProcess(message) {
+function dataProcess(message) {
     // 隱藏PII浮窗
     const overlay = $("#overlay");
     overlay.hide();
@@ -91,7 +47,12 @@ function resultShow(data){
     const tableContainer = $("#table-container");
     tableContainer.show();
     $(".language-btn").hide();
-    $(".language-btn.select").show();
+    const languageShow = $(`#${data.target_language}`), languageNow = $(".language-btn.select");
+    if (languageNow.attr("id") != languageShow.attr("id")){
+        languageShow.addClass("select");
+        languageNow.removeClass("select");
+    }
+    languageShow.show();
 
     // 產生表格內容
     let tableHtml = `
@@ -123,7 +84,7 @@ function resultShow(data){
     // 左欄：顯示原文跟翻譯後結果
     $("#input-col").hide();
     $("#output-col").show();
-    $("#original-text").val(data.original_text);
+    $("#original-text").val(data.text);
     $("#translated-text").val(data.translated_text);
 }
 

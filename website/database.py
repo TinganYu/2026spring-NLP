@@ -7,11 +7,13 @@ def connect():
     
     client = MongoClient(host='localhost',port=27017)
     db = client.NLP_FinalProject
+    print("[DATABASE] Connected.")
     return
 
 # 斷連 database
 def disconnect():
     client.close()
+    print("[DATABASE] Disconnected.")
     return
 
 # 存入 diary 分析資料
@@ -36,10 +38,15 @@ def diary_find(select_dict = None):
     print(f"[DATABASE] Select diary record with Condition: {select_dict}.")
     return result
 
-def medical_insert():
-    #alloc_tmp = {'name':tmp,'chr1':c[0]['_id'],'chr2':c[1]['_id'],'chr3':c[2]['_id']}
+# 存入 medical 分析資料
+def medical_insert(medical_record):
+    insert_data = medical_record.copy()
+    db.medical.insert_one(insert_data)
+    
+    print("[DATABASE] Inserted medical record complete.")
     return
 
+# 在 medical table 中尋找資料
 def medical_find(select_dict = None):
     # select_dict: 尋找符合哪些條件的資料
     # 沒有設定條件就回傳所有資料
@@ -49,5 +56,4 @@ def medical_find(select_dict = None):
         result = db.medical.find(select_dict, {"_id": 0})
         
     print(f"[DATABASE] Select medical record with Condition: {select_dict}.")
-    print(result)
     return result

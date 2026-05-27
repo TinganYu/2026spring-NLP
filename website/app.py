@@ -4,6 +4,7 @@ import os
 sys.path.append(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
+from datetime import datetime
 
 import configparser
 from flask import Flask, request, abort, render_template, url_for, Blueprint, jsonify
@@ -143,16 +144,20 @@ def process_medical():
         
         # 回傳結果給前端
         result = {
-            "original_text": text,
+            "date": str(datetime.now().date()),
+            "text": text,
             "translated_text": text_translated['translations'][0]['text'],
+            "target_language": target_lang,
             "phi": phi
         }
+        db.medical_insert(result)
         print("Medical Result:", result)
         return jsonify(result)
  
 # 執行語音錄入並回傳錄入文字   
 @app.route("/speech_to_text", methods=["POST"])
 def speech():
+    print("[POST] Speech to Text POST")
     result = speech_to_text()
     return jsonify(result)
 
@@ -180,14 +185,14 @@ def db_select():
 
     # 搜尋對應 database 中的所有資料
     if database == "diary":
-        # 資料按照日期
         result = db.diary_find()
-        result.sort("date",-1)
     elif database == "medical":
         result = db.medical_find()
     else:
-        return None
+        return jsonify(None)
     
+    # 按照日期降序排序，並轉成list以便處理
+    result.sort("date",-1)
     result = list(result)
     return jsonify(result)
 

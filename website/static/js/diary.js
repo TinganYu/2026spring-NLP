@@ -1,64 +1,11 @@
 var message_tmp = "";   // 暫存 PII 遮蔽過後的結果
 
 $(function(){
-    // 左欄按鈕(輸入狀態)
-    $("#analyze").click(pii_check);
-    
-    $("#erase").click(function() {
-        $("#message").val("");
-    });
-
-    // PII浮窗按鈕
-    $("#pii-redacted").click(function() {   // 遮蔽PII後再分析，並在左欄顯示分析結果
-        $("#message").val(message_tmp);
-        diaryProcess(message_tmp);
-    });
-
-    $("#ignore").click(() => diaryProcess(null));   // 直接分析
-
-    // 歷史紀錄
-    $("#history-btn").click(historyShow);
-    $("#history-close").click(historyHide);
+    //目前都跟medical重疊了(在tab.js裡)，但先保留
 });
 
-// PII檢測
-function pii_check() {
-    let message = $("#message").val();
-
-    //先確認日記內容裡是否有PII
-    $.post("/pii_review", {text: message}, function (data) {
-        if(data.needs_masking == true) {    //偵測到 PII
-            // 顯示浮窗
-            const overlay = $("#overlay");
-            overlay.show();
-            message_tmp = "";
-
-            // 在浮窗中將PII醒目標示
-            const popupText = $("#popup_text");
-            let popupHtml = ``;
-            let p = 0;
-            for(const entity of data.entities) {
-                popupHtml += message.slice(p, entity.start);
-                message_tmp += message.slice(p, entity.start);
-
-                popupHtml += `<span class="pii-entity">${message.slice(entity.start, entity.end)}</span>`;
-                message_tmp += "▉".repeat(entity.end - entity.start);
-
-                p = entity.end;
-            }
-            if(p < message.length){
-                popupHtml += message.slice(p);
-                message_tmp += message.slice(p);
-            }
-            popupText.html(popupHtml);
-        }
-        else    //沒有偵測到PII，直接開始分析
-            diaryProcess(null);
-    });
-}
-
 // 執行日記分析
-function diaryProcess(message) {
+function dataProcess(message) {
     // 隱藏PII浮窗
     const overlay = $("#overlay");
     overlay.hide();
@@ -83,11 +30,12 @@ function diaryProcess(message) {
 function resultShow(data) {
     resultClean();   // 清除舊結果
     const resultCol = $("#result-col");
+    $("#message").val(data.text);
 
     // 新增 今日情緒 結果顯示行
     let htmlContent = `
     <div class="float-row result-row">
-        <p>今日情緒</p>
+        <h4>今日情緒</h4>
         <div style="grid-column: 1">`;
 
     // 根據情緒加入圖標與文字
@@ -119,7 +67,7 @@ function resultShow(data) {
     if (data.symptoms.length > 0) {
         htmlContent += `
         <div class="float-row">
-            <p>症狀紀錄</p>`;
+            <h4>症狀紀錄</h4>`;
 
         // 以每個症狀為一行顯示
         for (const symptom of data.symptoms) {
@@ -130,27 +78,27 @@ function resultShow(data) {
                 htmlContent += `
                 <div class="dot"></div>
                 <div class="column">
-                    <div class="row">
+                    <div class="row" style="gap:5px;">
                     <span>${symptom.key}</span>`;
             else if (symptom.severity == 2)
                 htmlContent += `
                 <div class="dot pan-mid"></div>
                 <div class="column">
-                    <div class="row">
+                    <div class="row" style="gap:5px;">
                     <span>${symptom.key}</span>
                     <span class="label label-2">中等</span>`;
             else if (symptom.severity == 1)
                 htmlContent += `
                 <div class="dot neutral"></div>
                 <div class="column">
-                    <div class="row">
+                    <div class="row" style="gap:5px;">
                     <span>${symptom.key}</span>
                     <span class="label label-1">輕度</span>`;
             else
                 htmlContent += `
                 <div class="dot negative"></div>
                 <div class="column">
-                    <div class="row">
+                    <div class="row" style="gap:10px;">
                     <span>${symptom.key}</span>
                     <span class="label label-3">嚴重</span>`;
 
@@ -187,7 +135,7 @@ function resultShow(data) {
     if (data.medications.length > 0) {
         htmlContent += `
         <div class="float-row" style="display: flex; flex-direction: column;">
-            <p>用藥紀錄</p>`;
+            <h4>用藥紀錄</h4>`;
 
             // 以每個用藥為一行顯示
             for (const medication of data.medications){
@@ -221,7 +169,6 @@ function resultShow(data) {
 
     // 將html注入
     resultCol.append(htmlContent);
-    console.log(htmlContent);
 }
 
 // 清空右欄結果顯示
@@ -233,33 +180,4 @@ function resultClean() {
             <button class="btn" id="history-btn">歷史紀錄</button>
         </div>`);
     $("#history-btn").click(historyShow);
-}
-
-// 顯示歷史紀錄右欄，並加入每個紀錄的按鈕
-function historyShow(){ //考慮到疼痛指數修改，也許data要留id
-    $("#history-overlay").show();
-
-    // 從後端取得歷史紀錄
-    $.post("/history_get", {class: "diary"} , function (data) {
-        let history_col = $("#history-col");
-
-        // 
-        for (const d of data){
-            const button = $(`<button class="history-block"></button>`);
-            button.html(`
-                <p>${d.date}</p>
-                <p class="history-text">${d.text}</p>`);
-
-            button.click(function() { 
-                historyHide();
-                resultShow(d);
-            });
-
-            history_col.append(button);
-        }
-    });
-}
-
-function historyHide(){
-    $("#history-overlay").hide();
 }
