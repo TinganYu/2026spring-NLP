@@ -30,7 +30,7 @@ def aggregate_weekly_records(records: List[AnalysisResult]) -> Dict[str, Any]:
         "medication_frequency_chart": {},
         "cooccurrence_chart": {},
         "symptom_timeline": {},
-        # "symptom_severity_chart": {},
+        "symptom_severity_chart": {},
         "medication_timeline": {},
         "emotion_heatmap_calendar": {},
         "cooccurrence_heatmap": {},
