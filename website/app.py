@@ -11,14 +11,16 @@ from flask import Flask, request, abort, render_template, url_for, Blueprint, js
 import website.database as db
 
 from diary.processor import process_entry
-from shared.pii import review_pii
+
 from diary.analysis import to_diary_record
 from diary.aggregator import aggregate_weekly_records 
 from diary.groq import summarize_health_trend, build_weekly_groq_payload
 
-from medical.service_translate import call_translate_service
 from medical.service_phi import call_phi_service
 from medical.service_speech import speech_to_text
+
+from shared.pii import review_pii
+from shared.translate import translate_to
 
 
 # Config Parser
@@ -87,14 +89,14 @@ def process_diary():
                 symptom["key"] = symptom["display"]
             del symptom["display"]
             
-            symptom["key"] = call_translate_service(symptom["key"], target)['translations'][0]['text']
+            symptom["key"] = translate_to(symptom["key"], target)
             
             # 翻譯所有時間跟頻率，只保留翻譯結果
             for i in range(len(symptom['times'])):
-                symptom['times'][i] = call_translate_service(symptom['times'][i], target)['translations'][0]['text']
+                symptom['times'][i] = translate_to(symptom['times'][i], target)
                 
             for i in range(len(symptom['frequencies'])):
-                symptom['frequencies'][i] = call_translate_service(symptom['frequencies'][i], target)['translations'][0]['text']
+                symptom['frequencies'][i] = translate_to(symptom['frequencies'][i], target)
         
         for medication in diary_record_view["medications"]: # 翻譯用藥
             # 如果沒有 key 就顯示 display，保留原文跟翻譯結果
@@ -104,14 +106,14 @@ def process_diary():
             
             # [0]: 原文, [1]: 翻譯結果
             medication["key"] = [medication["key"]]
-            medication["key"].append(call_translate_service(medication["key"][0], target)['translations'][0]['text'])
+            medication["key"].append(translate_to(medication["key"][0], target))
             
             # 翻譯所有時間跟頻率，只保留翻譯結果
             for i in range(len(medication['dosages'])):
-                medication['dosages'][i] = call_translate_service(medication['dosages'][i], target)['translations'][0]['text']
+                medication['dosages'][i] = translate_to(medication['dosages'][i], target)
                 
             for i in range(len(medication['frequencies'])):
-                medication['frequencies'][i] = call_translate_service(medication['frequencies'][i], target)['translations'][0]['text']
+                medication['frequencies'][i] = translate_to(medication['frequencies'][i], target)
         
         # 存 diary data 到 DB
         db.diary_insert(text, diary_record_view)
@@ -130,23 +132,34 @@ def process_medical():
         target_lang = data["language"]
         
         # 翻譯醫囑
-        text_translated = call_translate_service(text, target_lang)
+        text_translated = translate_to(text, target_lang)
         
         # 偵測醫囑PHI
         phi, medicine = call_phi_service(text)
+        print(phi)
         
-        #給所有PHI翻譯成中文，並把翻譯加入 phi(dict)
-        for key, value in phi.items():
+        #給所有PHI翻譯，並把翻譯加入 phi(dict)
+        for key in ["病名","症狀"]:
+            value = phi[key]
             tmp = {"original": value, "translated": []}
             for i in value:
-                tmp["translated"].append(call_translate_service(i, target_lang)["translations"][0]["text"])
+                tmp["translated"].append(translate_to(i, target_lang))
             phi[key] = tmp
+        for medicine in phi["藥劑"]:
+            for key, value in medicine.items():
+                if key == "藥名":
+                    medicine[key] = [value, translate_to(value, target_lang)]
+                else:
+                    tmp = {"original": value, "translated": []}
+                    for i in value:
+                        tmp["translated"].append(translate_to(i, target_lang))
+                    medicine[key] = tmp
         
         # 回傳結果給前端
         result = {
             "date": str(datetime.now().date()),
             "text": text,
-            "translated_text": text_translated['translations'][0]['text'],
+            "translated_text": text_translated,
             "target_language": target_lang,
             "phi": phi
         }

@@ -2,13 +2,28 @@
     box-sizing: border-box;
 }
 
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow-x: hidden;
+}
+
 button {
     font-size: clamp(4px, 1.5vw, 16px);
+    cursor: pointer;
 }
 
 h2{
     font-size: 22px;
     font-weight: bold;
+    margin: 0;
+}
+
+h3 {
+    font-weight: bold;
+    color: #64748B;
     margin: 0;
 }
 
@@ -19,12 +34,35 @@ h4 {
     margin: 0;
 }
 
-html, body {
-    margin: 0;
-    padding: 0;
+/* 表格樣式(醫囑結果呈現) */
+table {
     width: 100%;
-    height: 100%;
-    overflow-x: hidden;
+}
+
+table th{
+    text-align: left;
+    color: #8aa0c0;
+    padding: 12px 16px;
+}
+
+table td{
+    font-size: 16px;
+    padding: 12px 16px;
+}
+
+table th:nth-child(1),
+table td:nth-child(1){
+    width: 10%;
+}
+
+table th:nth-child(2),
+table td:nth-child(2){
+    width: 45%;
+}
+
+table th:nth-child(3),
+table td:nth-child(3){
+    width: 45%;
 }
 
 /* 行列們 */
@@ -103,8 +141,6 @@ html, body {
 
     font-size: 16px;
     color: #8D9CB0;
-
-    cursor: pointer;
 }
 
 .btn {
@@ -112,7 +148,6 @@ html, body {
     border-radius: 5px;
     
     color: #64748B;
-    cursor: pointer;
 }
 
 .language-btn {
@@ -138,7 +173,7 @@ html, body {
     color: white;
 }
 
-.link-btn {
+.img-btn {
     border: none;
     background: none;
     padding: 0;
@@ -252,7 +287,7 @@ html, body {
     background: #ebebeb;
     color: #a0a09e;
     border-radius: 15px;
-    padding: 2px 6px;
+    padding: 2px 8px;
     width: fit-content;
 }
 
@@ -285,6 +320,38 @@ html, body {
 
 .neutral {
     background: #fff23d;
+}
+
+/*醫囑結果顯示*/
+.table-tag {
+    font-weight: bold;
+    border-radius: 5px;
+    padding: 6px 9px;
+}
+
+.病名 {
+    background: #FFF4CC;
+    color: #D97706;
+}
+.症狀 {
+    background:#FFE1E3;
+    color: #E63946;
+}
+.藥名 {
+    background:#E6F4EA;
+    color: #2E7D32;
+}
+.劑量 {
+    background: #E6F0FF;
+    color: #2563EB;
+}
+.頻率 {
+    background: #E8EBFF;
+    color: #4F46E5;
+}
+.註記 {
+    background: #F1F3F5;
+    color: #495057;
 }
 
 /* 其他 */

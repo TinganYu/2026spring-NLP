@@ -35,22 +35,17 @@ function resultShow(data) {
     // 新增 今日情緒 結果顯示行
     let htmlContent = `
     <div class="float-row result-row">
-        <h4>今日情緒</h4>
-        <div style="grid-column: 1">`;
+        <h3>今日情緒</h3>
+        <div style="grid-column: 1; padding: 10px">`;
 
     // 根據情緒加入圖標與文字
+    htmlContent += `<img src="/static/image/${data.emotion_label}-icon.png" style="width:10vh; height:10vh;">`;
     if (data.emotion_label == 'negative')
-        htmlContent += `
-        <!-- <img> -->
-        <span>負面情緒</span>`;
+        htmlContent += `<span>負面情緒</span>`;
     else if (data.emotion_label == 'positive')
-        htmlContent += `
-        <!-- <img> -->
-        <span>正面情緒</span>`;
+        htmlContent += `<span>正面情緒</span>`;
     else if (data.emotion_label == 'neutral')
-        htmlContent += `
-        <!-- <img> -->
-        <span>中性情緒</span>`;
+        htmlContent += `<span>中性情緒</span>`;
     
     // 顯示情緒強度
     let emotion_score = data.emotion_score.toFixed(2) * 100;
@@ -67,7 +62,7 @@ function resultShow(data) {
     if (data.symptoms.length > 0) {
         htmlContent += `
         <div class="float-row">
-            <h4>症狀紀錄</h4>`;
+            <h3>症狀紀錄</h3>`;
 
         // 以每個症狀為一行顯示
         for (const symptom of data.symptoms) {
@@ -135,7 +130,7 @@ function resultShow(data) {
     if (data.medications.length > 0) {
         htmlContent += `
         <div class="float-row" style="display: flex; flex-direction: column;">
-            <h4>用藥紀錄</h4>`;
+            <h3>用藥紀錄</h3>`;
 
             // 以每個用藥為一行顯示
             for (const medication of data.medications){

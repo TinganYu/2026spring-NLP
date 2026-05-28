@@ -43,9 +43,7 @@ function dataProcess(message) {
 
 // 醫囑分析結果顯示
 function resultShow(data){
-    // 顯示表格並隱藏非選取的語言按鈕
-    const tableContainer = $("#table-container");
-    tableContainer.show();
+    // 隱藏非選取的語言按鈕
     $(".language-btn").hide();
     const languageShow = $(`#${data.target_language}`), languageNow = $(".language-btn.select");
     if (languageNow.attr("id") != languageShow.attr("id")){
@@ -54,24 +52,31 @@ function resultShow(data){
     }
     languageShow.show();
 
-    // 產生表格內容
+    const resultCol = $("#result-col");
+    resultCol.children().not("#language-row").remove();
+    containerHtml = `<div class="float-row"></div>`;
+
+    // 產生病名+症狀的表格內容
+    const tableContainer = $(containerHtml);
     let tableHtml = `
+    <h3>病名＆症狀</h3>
     <table>
         <tr>
             <th>標籤</th>
-            <th>醫療實體內容(原文)</th>
-            <th>目標語言翻譯結果(${$(".language-btn.select").text()})</th>
+            <th>原文</th>
+            <th>翻譯結果（${$(".language-btn.select").text()}）</th>
         </tr>`;
+    let showBool = false;
 
-    for (const [key, value] of Object.entries(data.phi)) {
-        console.log(key, value);
-        console.log(value.original.length);
-        console.log(value.original);
+    for (const key of ["病名", "症狀"]) {
+        const value = data.phi[key];
         for (let i = 0; i < value.original.length; i++) {
+            if(!showBool)
+                showBool = true;
             // 之後再補上欄位樣式
             tableHtml += `
             <tr>
-                <td>${key}</td>
+                <td><span class="${key} table-tag">${key}</span></td>
                 <td>${value.original[i]}</td>
                 <td>${value.translated[i]}</td>
             </tr>
@@ -80,6 +85,51 @@ function resultShow(data){
     }
     tableHtml += `</table>`;
     tableContainer.html(tableHtml);
+
+    if(showBool)
+        resultCol.append(tableContainer);
+
+    // 產生各個藥劑的表格內容
+    for(const medicine of data.phi.藥劑){
+        const medicineContainer = $(containerHtml);
+        showBool = false;
+        let medicineHtml = `
+            <div class="row">
+                <h3>${medicine.藥名[1]}（${medicine.藥名[0]}）</h3>
+                <button class="img-btn">
+                    <img>
+                </button>
+            </div>
+            <table>
+                <tr>
+                    <th>標籤</th>
+                    <th>原文</th>
+                    <th>翻譯結果（${$(".language-btn.select").text()}）</th>
+                </tr>`;
+        
+        // 要對按鈕做url綁定
+        
+        for(const key of ["劑量", "頻率", "註記"]){
+            if(medicine[key].original.length > 0){
+                if(!showBool)
+                    showBool = true;
+                const originAll = medicine[key].original.join(", ");
+                const transAll = medicine[key].translated.join(", ");
+                medicineHtml +=  `
+                <tr>
+                    <td><span class="${key} table-tag">${key}</span></td>
+                    <td>${originAll}</td>
+                    <td>${transAll}</td>
+                </tr>
+                `;
+            }
+        }
+
+        medicineHtml += `</table>`;
+        medicineContainer.html(medicineHtml);
+        if(showBool)
+            resultCol.append(medicineContainer);
+    }
 
     // 左欄：顯示原文跟翻譯後結果
     $("#input-col").hide();

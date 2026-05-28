@@ -27,9 +27,9 @@
                     <h2>醫囑錄入</h2>
                 </div>
                 <h4>使用語音輸入</h4>
-                <button class="btn" id="upload-mp3" style="height: 6%";>點擊開始錄入醫囑內容</button>
+                <button class="btn" id="upload-mp3" style="height: 8%";>點擊開始錄入醫囑內容</button>
                 <h4>或手動輸入醫囑內容</h4>
-                <textarea id="message" name="message" placeholder="請輸入文字……" class="textarea" style="height: 60%"></textarea> 
+                <textarea id="message" name="message" placeholder="請輸入文字……" class="textarea" style="height: 82%"></textarea> 
                 <div class="row" style="height: 10%; gap:10px;">
                     <button class="btn right-bown-btn" id="erase" style="width: 40%;">清除內容</button>
                     <button class="btn select right-bown-btn" id="analyze" style="width: 60%;">翻譯並執行醫囑解析</button>
@@ -47,16 +47,14 @@
             
             <!-- 結果顯示頁面 -->
             <div class="main-column" id="result-col">
-                <div class="float-row" id="language-row" style="height:10%;">
+                <div class="float-row" id="language-row" style="height:10vh;">
                     <h2 style=" display: inline;">目標翻譯語言：</h2>
                     <button class="btn language-btn select" id="zh-Hant">繁體中文</button>
                     <button class="btn language-btn" id="vi">Tiếng Việ</button>
                     <button class="btn language-btn" id="id">Bahasa Indonesia</button>
                     <button class="btn" id="history-btn">歷史紀錄</button>
                 </div>
-                <div class="float-row" id="table-container" style="display: none;"> 
-                    <!-- 表格插入的地方 -->
-                </div>
+                <!-- 表格插入的地方 -->
             </div>
         </div>
 
@@ -65,9 +63,9 @@
             <div class="popup" id="popup">
                 <h2>安全攔截：偵測到敏感個資</h2>
                 <p id="popup_text"></p>
-                <div class="row">
-                    <button class="btn" id="ignore">忽略送出</button>
-                    <button class="btn pii-btn" id="pii-redacted">確定遮蔽並解析</button>
+                <div class="row" style="width:100%; height:40px; gap:10px;">
+                    <button class="btn" id="ignore" style="width:40%; height:100%;">忽略送出</button>
+                    <button class="btn pii-btn" id="pii-redacted" style="width:60%; height:100%;">確定遮蔽並解析</button>
                 </div>
             </div>
         </div>
@@ -86,7 +84,7 @@
             <div class="main-column" id="history-col">
                 <div class="row">
                     <img>
-                    <h2>歷史紀錄(醫療囑咐)</h2>
+                    <h2>歷史紀錄（醫療囑咐）</h2>
                     <button id="history-close">×</button>
                 </div>
             </div>
