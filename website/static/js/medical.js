@@ -73,7 +73,7 @@ function resultShow(data){
         for (let i = 0; i < value.original.length; i++) {
             if(!showBool)
                 showBool = true;
-            // 之後再補上欄位樣式
+            
             tableHtml += `
             <tr>
                 <td><span class="${key} table-tag">${key}</span></td>
@@ -96,9 +96,11 @@ function resultShow(data){
         let medicineHtml = `
             <div class="row">
                 <h3>${medicine.藥名[1]}（${medicine.藥名[0]}）</h3>
-                <button class="img-btn">
-                    <img>
-                </button>
+                <a href="${medicine.url}" target="_blank">
+                    <button class="img-btn">
+                        <img src="/static/image/link-icon.png" style="height:30px; width:30px;">
+                    </button>
+                </a>
             </div>
             <table>
                 <tr>
@@ -127,8 +129,9 @@ function resultShow(data){
 
         medicineHtml += `</table>`;
         medicineContainer.html(medicineHtml);
-        if(showBool)
-            resultCol.append(medicineContainer);
+        resultCol.append(medicineContainer);
+        if(!showBool)
+            medicineContainer.find("table").remove();
     }
 
     // 左欄：顯示原文跟翻譯後結果

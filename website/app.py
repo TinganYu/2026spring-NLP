@@ -18,6 +18,7 @@ from diary.groq import summarize_health_trend, build_weekly_groq_payload
 
 from medical.service_phi import call_phi_service
 from medical.service_speech import speech_to_text
+from medical.wiki_utils import get_wiki_info
 
 from shared.pii import review_pii
 from shared.translate import translate_to
@@ -149,11 +150,13 @@ def process_medical():
             for key, value in medicine.items():
                 if key == "藥名":
                     medicine[key] = [value, translate_to(value, target_lang)]
+                    _url = get_wiki_info(value)
                 else:
                     tmp = {"original": value, "translated": []}
                     for i in value:
                         tmp["translated"].append(translate_to(i, target_lang))
                     medicine[key] = tmp
+            medicine['url'] = _url
         
         # 回傳結果給前端
         result = {
