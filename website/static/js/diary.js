@@ -57,10 +57,11 @@ function resultShow(data) {
             <p>情緒強度 ${emotion_score}%</p>
         </div>
     </div>`;
+    resultCol.append(htmlContent);
 
     // 新增 症狀紀錄 結果顯示行
-    if (data.symptoms.length > 0) {
-        htmlContent += `
+    if (data.symptoms.length > 0) { //因為要給button綁事件所以這裡程式要改漂亮點
+        htmlContent = `
         <div class="float-row">
             <h3>症狀紀錄</h3>`;
 
@@ -81,21 +82,27 @@ function resultShow(data) {
                 <div class="column">
                     <div class="row" style="gap:5px;">
                     <span>${symptom.key}</span>
-                    <span class="label label-2">中等</span>`;
+                    <button class="label label-2">中等
+                        <span class="material-symbols-outlined">edit</span>
+                    </button>`;
             else if (symptom.severity == 1)
                 htmlContent += `
                 <div class="dot neutral"></div>
                 <div class="column">
                     <div class="row" style="gap:5px;">
                     <span>${symptom.key}</span>
-                    <span class="label label-1">輕度</span>`;
+                    <button class="label label-1">輕度
+                        <span class="material-symbols-outlined">edit</span>
+                    </button>`;
             else
                 htmlContent += `
                 <div class="dot negative"></div>
                 <div class="column">
                     <div class="row" style="gap:10px;">
                     <span>${symptom.key}</span>
-                    <span class="label label-3">嚴重</span>`;
+                    <button class="label label-3">嚴重
+                        <span class="material-symbols-outlined">edit</span>
+                    </button>`;
 
             // 顯示症狀狀態
             if (symptom.status == "affirmed")

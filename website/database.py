@@ -57,3 +57,7 @@ def medical_find(select_dict = None):
         
     print(f"[DATABASE] Select medical record with Condition: {select_dict}.")
     return result
+
+# 回傳 start date ~ end date 的所有 diary data
+def date_period_select(start, end):
+    return diary_find({"date": {"$gte": start, "$lte": end}})

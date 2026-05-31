@@ -180,7 +180,7 @@ table td:nth-child(3){
     padding: 0;
 }
 
-.right-bown-btn {
+.right-down-btn {
     height: 100%;
 }
 
@@ -287,6 +287,7 @@ table td:nth-child(3){
 .label {
     background: #ebebeb;
     color: #a0a09e;
+    font-size: 16px;
     border-radius: 15px;
     padding: 2px 8px;
     width: fit-content;
@@ -295,16 +296,23 @@ table td:nth-child(3){
 .label-3 {
     color: #D64C46;
     background: #ffb0ab;
+    border: 1px solid #D64C46;
 }
 
 .label-2 {
     color: #d1881a;
     background: #ffd697;
+    border: 1px solid #d1881a;
 }
 
 .label-1 {
     color: #d8ad00;
     background: #fffbc7;
+    border: 1px solid #d8ad00;
+}
+
+.material-symbols-outlined {
+    font-size: 16px !important;
 }
 
 .pan-mid {

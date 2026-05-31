@@ -11,7 +11,6 @@ from flask import Flask, request, abort, render_template, url_for, Blueprint, js
 import website.database as db
 
 from diary.processor import process_entry
-
 from diary.analysis import to_diary_record
 from diary.aggregator import aggregate_weekly_records 
 from diary.groq import summarize_health_trend, build_weekly_groq_payload
@@ -47,7 +46,7 @@ def get_weekly_dashboard():
     end_date = request.args.get("end_date")
     
     # 從 DB 取出時間範圍內的日記（AnalysisResult 格式）
-    analysis_records = db.get_diaries_by_range(user_id, start_date, end_date)
+    analysis_records = db.date_period_select(start_date, end_date)
     
     # 直接聚合生成圖表
     dashboard_payload = aggregate_weekly_records(analysis_records)
@@ -121,7 +120,7 @@ def process_diary():
         print("Diary Record View:", diary_record_view)    
         return jsonify(diary_record_view)
 
-#接收前端送來的醫囑內容，並回傳分析結果
+# 接收前端送來的醫囑內容，並回傳分析結果
 @app.route("/medical_process", methods=["POST"])
 def process_medical():
     if request.method == "POST":
@@ -177,7 +176,7 @@ def speech():
     result = speech_to_text()
     return jsonify(result)
 
-#接收前端送來的內容，並回傳PII審核結果
+# 接收前端送來的內容，並回傳PII審核結果
 @app.route("/pii_review", methods=["POST"])
 def diary_pii_review():
     print("[POST] PII Review POST, received data:", request.form)
@@ -191,6 +190,7 @@ def diary_pii_review():
     print("PII Review Result:", review)
     return jsonify(review)
 
+# 取得歷史紀錄
 @app.route("/history_get", methods=["POST"])
 def db_select():
     print("[POST] History Get POST, received data:", request.form)
@@ -235,4 +235,20 @@ def graph():
 
 if __name__ == "__main__":
     db.connect()
+    # 測試用
+    '''start_date = "2025-01-01"
+    end_date = "2027-01-01"
+    
+    # 從 DB 取出時間範圍內的日記（AnalysisResult 格式）
+    analysis_records = db.date_period_select(start_date, end_date)
+    
+    # 直接聚合生成圖表
+    dashboard_payload = aggregate_weekly_records(analysis_records)
+    groq_payload = build_weekly_groq_payload(dashboard_payload)
+    ai_summary = summarize_health_trend(groq_payload)
+    print(dashboard_payload)
+
+    print("[GET] Weekly Dashboard Summary:")
+    print(ai_summary)'''
+    
     app.run()

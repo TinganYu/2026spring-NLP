@@ -5,6 +5,9 @@
         <title></title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="{{url_for('static', filename='css/new_style.css')}}">
+
+        <!-- Google 提供的圖示 -->
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@16,400,0,0&icon_names=edit" />
     </head>
     <body>
         <!-- 頂部的排 -->
@@ -20,8 +23,8 @@
         </div>
         <!-- 頁面主體 -->
         <div class="row" id="main">
-            <!-- 左欄 -->
-            <div class="main-column" style="width: 25%; left:0;">
+            <!-- 左欄(輸入) -->
+            <div class="main-column" id="input-col" style="width: 25%; left:0;">
                 <div class="row">
                     <img>
                     <h2>新增日記記錄</h2>
@@ -32,7 +35,19 @@
                     <button class="btn right-bown-btn" id="erase" style="width: 40%;">清除內容</button>
                     <button class="btn diary-btn right-bown-btn" id="analyze" style="width: 60%;">儲存並分析</button>
                 </div>
-                <div id="analyzeComplete">
+            </div>
+
+            <!-- 左欄(輸出) -->
+            <div class="main-column" id="output-col" style="width: 25%; left:0; display:none;">
+                <div class="row">
+                    <img>
+                    <h2>日記分析結果確認</h2>
+                </div>
+                <input type="date" id="date-output" name="date" style="width: 100%;" readonly>
+                <textarea id="text-output" name="message" class="textarea" style="height: 90%;" readonly></textarea> 
+                <div class="row" style="height: 10%; gap:10px;">
+                    <button class="btn right-down-btn" id="return" style="width: 40%;">返回輸入</button>
+                    <button class="btn diary-btn right-down-btn" id="analyze" style="width: 60%;">更新疼痛指數</button>
                 </div>
             </div>
             
