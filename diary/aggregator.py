@@ -1,44 +1,40 @@
 """跨 entry 的聚合/圖表 Payload 建構器。
 
 這裡只做兩件事：
-1. 把 `AnalysisResult` 轉成統一的 `DiaryRecord`
+1. 接收已整理好的 `DiaryRecord`
 2. 交給 `visualization` 產生所有圖表 payload
 
 這樣流程比較直線，閱讀時不用一直在不同格式間跳來跳去。
 """
 from typing import List, Dict, Any
 from collections import Counter, defaultdict
-from .models import AnalysisResult
-from .analysis import to_diary_record
+from .models import DiaryRecord
 from .visualization import build_health_dashboard_payload
 
 
-def aggregate_weekly_records(records: List[AnalysisResult]) -> Dict[str, Any]:
+def aggregate_weekly_records(records: List[DiaryRecord]) -> Dict[str, Any]:
     """Aggregate n days of diary records into weekly analysis.
     (會從app.py決定提供幾天的內容，根據那些資料畫表格，不限於7天)
-    接收 AnalysisResult 列表，轉成 DiaryRecord 並生成圖表。
+    接收 DiaryRecord 列表並生成圖表。
     """
     if not records:
         return {
-        "week_start": None,
-        "week_end": None,
-        "record_count": 0,
-        "emotion_statistics": {},
-        "phi_relations": [],
-        "emotion_line_chart": {},
-        "symptom_frequency_chart": {},
-        "medication_frequency_chart": {},
-        "cooccurrence_chart": {},
-        "symptom_timeline": {},
-        "symptom_severity_chart": {},
-        "medication_timeline": {},
-        "emotion_heatmap_calendar": {},
-        "cooccurrence_heatmap": {},
-    }
+            "week_start": None,
+            "week_end": None,
+            "record_count": 0,
+            "emotion_statistics": {},
+            "emotion_line_chart": {},
+            "symptom_frequency_chart": {},
+            "medication_frequency_chart": {},
+            "cooccurrence_chart": {},
+            "symptom_timeline": {},
+            "symptom_severity_chart": {},
+            "medication_timeline": {},
+            "emotion_heatmap_calendar": {},
+            "cooccurrence_heatmap": {},
+        }
 
-    # 將 AnalysisResult 轉成 DiaryRecord（dict 格式）
-    diary_records = [to_diary_record(record, record["entry"]["meta"].get("date") or "") for record in records]
-    diary_records.sort(key=lambda x: x["date"])
+    diary_records = sorted(records, key=lambda x: x["date"])
 
     dashboard = build_health_dashboard_payload(diary_records)
 
@@ -51,11 +47,11 @@ def aggregate_weekly_records(records: List[AnalysisResult]) -> Dict[str, Any]:
         "label_distribution": dict(label_counts),
         "trend_direction": "stable",
     }
-    if len(scores) >= 2: # 如果有兩筆以上的資料，才計算趨勢
+    if len(scores) >= 2:  # 如果有兩筆以上的資料，才計算趨勢
         polarities = [
             (-r["emotion_score"] if r["emotion_label"].lower() == "negative"
              else r["emotion_score"] if r["emotion_label"].lower() == "positive"
-             else 0.0) # 這邊預設 neutral 是 0，negative 是負分，positive 是正分
+             else 0.0)  # 這邊預設 neutral 是 0，negative 是負分，positive 是正分
             for r in diary_records
         ]
         # 計算簡單的線性趨勢（slope），判斷情緒是改善、惡化還是穩定
@@ -75,7 +71,7 @@ def aggregate_weekly_records(records: List[AnalysisResult]) -> Dict[str, Any]:
         "week_start": diary_records[0]["date"] if diary_records else None,
         "week_end": diary_records[-1]["date"] if diary_records else None,
         "record_count": len(diary_records),
-        "emotion_statistics": emotion_stats, # 情緒趨勢統計
-        **dashboard, # 包含所有圖表 payload (** 把dashboard dict裡的key/value攤平加入/合併最終回傳的dict)
+        "emotion_statistics": emotion_stats,  # 情緒趨勢統計
+        **dashboard,  # 包含所有圖表 payload (** 把dashboard dict裡的key/value攤平加入/合併最終回傳的dict)
     }
 

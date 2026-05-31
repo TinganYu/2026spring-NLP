@@ -1,7 +1,6 @@
 """PHI 相關的分析與輸出格式。
 
-提供 correlation discovery、看診懶人包等 on-demand 的 PHI 摘要功能。
-這些函式通常在使用者請求時被呼叫，而非在每次 process_entry 時執行。
+提供 PHI 摘要功能。將 PHI 的原始輸出整理成適合前端顯示和圖表使用的格式。
 """
 from collections import Counter
 from typing import Any, Dict, List
