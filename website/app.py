@@ -46,11 +46,11 @@ def get_weekly_dashboard():
     start_date = request.args.get("start_date") 
     end_date = request.args.get("end_date")
     
-    # 從 DB 取出時間範圍內的日記（AnalysisResult 格式）
-    analysis_records = db.get_diaries_by_range(user_id, start_date, end_date)
+    # 從 DB 取出時間範圍內的日記（DiaryRecord 格式）
+    diary_records = db.get_diaries_by_range(user_id, start_date, end_date)
     
     # 直接聚合生成圖表
-    dashboard_payload = aggregate_weekly_records(analysis_records)
+    dashboard_payload = aggregate_weekly_records(diary_records)
     groq_payload = build_weekly_groq_payload(dashboard_payload)
     ai_summary = summarize_health_trend(groq_payload)
 
