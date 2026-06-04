@@ -4,7 +4,7 @@
 """
 
 from typing import List, Dict, Any, Optional, TypedDict
-
+from shared.phi import HealthAnalysisResult
 
 class SymptomRecord(TypedDict):
     key: str
@@ -56,4 +56,4 @@ class AnalysisResult(TypedDict, total=False):
     entry: DiaryEntry
     emotion: EmotionResult
     symptoms: List[Dict[str, Any]]
-    phi: Optional[Dict[str, Any]]
+    phi: HealthAnalysisResult

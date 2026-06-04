@@ -19,7 +19,7 @@ _AZURE_TRANSLATOR_REGION = _get_setting("AzureTranslator", "Region", "AZURE_TRAN
 class TranslationItem(TypedDict, total=False):
     text: str
     to: str
-    # alignment 已移除，前端/上層負責處理對齊需求
+    # alignment 已移除，沒有用
 
 class TranslationResult(TypedDict, total=False):
     source_text: str
@@ -57,7 +57,7 @@ def translate_text(
         return {"source_text": text, "detected_language": None, "translations": []}
 
     client = _get_client()
-    targets = [target_language] if isinstance(target_language, str) else list(target_language) # Azure Translator API 需要一個 list，即使只有一個目標語言也要包成 list 傳入。
+    targets = [target_language] if isinstance(target_language, str) else list(target_language) # Azure Translator API 需要一個 list，如果輸入是str(單一個)就轉成list，如果已經是list就直接使用。
     if not targets:
         raise ValueError("target_language 不可為空。")
 
@@ -71,30 +71,19 @@ def translate_text(
         )
     except HttpResponseError as exc:
         raise RuntimeError(f"Azure 翻譯失敗: {exc}") from exc
-
     if not response:
         return {"source_text": text, "detected_language": None, "translations": []}
 
     first_item = response[0] # Azure Translator API 的回應是一個列表，每個元素對應一個輸入文本。因為我們一次只翻譯一段文本，所以取第一個元素即可。
     detected_language = getattr(getattr(first_item, "detected_language", None), "language", None)
-    translations = [{"text": translation.text, "to": translation.to} for translation in first_item.translations]
-
+    
+    translation_list: List[TranslationItem] = [ {"text": translation.text, "to": translation.to} for translation in first_item.translations]
+    
     return {
         "source_text": text,
         "detected_language": detected_language,
-        "translations": translations,
+        "translations": translation_list,
     }
-
-
-# ============= Convenience function for common use case =============
-# 只回傳第一個翻譯結果的文本，適合大多數只需要單一翻譯的情況。
-def translate_to(text: str, target_language: str, source_language: Optional[str] = None) -> str:
-    """Translate text and return the first translated string for the requested target language."""
-    result = translate_text(text, target_language=target_language, source_language=source_language)
-    # result is now a dict
-    if not result.get("translations"):
-        return text
-    return result["translations"][0]["text"]
 
 
 

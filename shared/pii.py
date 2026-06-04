@@ -34,9 +34,9 @@ def review_pii(text: str, language: Optional[str] = None) -> PIIReview:
         raise RuntimeError("Azure API Key 或 Endpoint 未設定。")
 
     endpoint = _AZURE_ENDPOINT.rstrip("/")
-    api_url = f"{endpoint}/language/:analyze-text?api-version=2025-11-15-preview"
+    api_url = f"{endpoint}/language/:analyze-text?api-version=2025-11-15-preview" 
 
-    headers = {
+    headers = { # Azure PII API 的認證和內容類型設定
         "Ocp-Apim-Subscription-Key": _AZURE_KEY,
         "Content-Type": "application/json",
     }
@@ -68,10 +68,12 @@ def review_pii(text: str, language: Optional[str] = None) -> PIIReview:
             ]
         },
     }
-    # ======這幾段基本上只是做檢查和錯誤處理===================================
+    
     try:
         response = requests.post(api_url, headers=headers, json=body, timeout=30)
-        response.raise_for_status()
+        response.raise_for_status() # 如果 HTTP 回應狀態碼不是 200，會丟出例外
+
+    # ======這幾段基本上只是做檢查和錯誤處理===================================
     except requests.exceptions.RequestException as exc:
         details = ""
         if hasattr(exc, "response") and exc.response is not None:
@@ -92,7 +94,7 @@ def review_pii(text: str, language: Optional[str] = None) -> PIIReview:
         parsed_entities = doc.get("entities", [])
         parsed_redacted_text = doc.get("redactedText", text)
 
-    # 轉換成 dict 序列
+    # 轉換成自定義 dict 序列
     items: List[PIIItem] = []
     for e in parsed_entities:
         offset = int(e.get("offset", 0) or 0)

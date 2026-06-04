@@ -13,16 +13,13 @@ from datetime import datetime
 from .models import DiaryRecord
 
 
-def _sort_records_by_date(records: List[DiaryRecord]) -> List[DiaryRecord]:
-    return sorted(records, key=lambda r: r["date"])
-
 
 def build_emotion_line_chart(records: List[DiaryRecord]) -> Dict[str, Any]:
     """情緒極性折線圖資料"""
-    sorted_records = _sort_records_by_date(records)
-    labels = []
-    values = []
-    markers = []
+    sorted_records = sorted(records, key=lambda r: r["date"])
+    labels = [] # x 軸標籤，日期
+    values = [] # y 軸數值，這裡用情緒極性（positive: 正分, negative: 負分, neutral: 0）表示
+    markers = [] # 用於前端顯示的標記點，包含日期、情緒分數、症狀和用藥等資訊，方便前端顯示
 
     for record in sorted_records:
         date_text = record["date"]
@@ -33,7 +30,7 @@ def build_emotion_line_chart(records: List[DiaryRecord]) -> Dict[str, Any]:
         polarity = -score if label == "negative" else score if label == "positive" else 0.0
         values.append(polarity)
 
-        markers.append({
+        markers.append({ # 使用者點及某個點時，可以看到這些資訊
             "date": date_text,
             "emotion_label": record["emotion_label"],
             "emotion_score": record["emotion_score"],
@@ -44,8 +41,8 @@ def build_emotion_line_chart(records: List[DiaryRecord]) -> Dict[str, Any]:
 
     return {
         "chart_type": "line",
-        "labels": labels,
-        "series": [{
+        "labels": labels, # x 軸
+        "series": [{ # series 是為了支援多條線的格式，這裡我們只有一條線，命名為 emotion_polarity
             "name": "emotion_polarity",
             "label": "Emotion Polarity",
             "type": "line",
@@ -59,19 +56,17 @@ def build_emotion_line_chart(records: List[DiaryRecord]) -> Dict[str, Any]:
 def build_symptom_frequency_chart(records: List[DiaryRecord], top_n: int = 10) -> Dict[str, Any]:
     """統計症狀/徵象出現頻率（依賴 normalized key）"""
     counter = Counter()
-    name_map = {}
     
     for record in records:
         for sym in record["symptoms"]:
-            key = sym["key"] or sym["display"]
+            key = sym["key"] or sym["display"] # 優先使用key，如果沒有就使用display名稱
             if key:
                 counter[key] += 1
-                name_map[key] = sym["display"]
 
-    items = counter.most_common(top_n)
+    items = counter.most_common(top_n) # (symptom_key, count) 的列表，依頻率排序，取前 top_n
     return {
         "chart_type": "bar",
-        "labels": [name_map.get(k, k) for k, _ in items],
+        "labels": [k for k, _ in items], # x 軸標籤，症狀名稱
         "series": [{
             "name": "symptom_frequency",
             "label": "Symptom Frequency",
@@ -79,18 +74,17 @@ def build_symptom_frequency_chart(records: List[DiaryRecord], top_n: int = 10) -
             "data": [count for _, count in items],
             "y_axis": "count",
         }],
-        "ranking": [{"name": k, "display": name_map.get(k, k), "count": count} for k, count in items],
+        "ranking": [{"name": k, "display": k, "count": count} for k, count in items], # 顯示用的排名列表，包含 key、display 名稱和計數，方便前端顯示
     }
 
 
-def build_medication_frequency_chart(records: List[DiaryRecord], top_n: int = 10, include_only_taken: bool = False) -> Dict[str, Any]:
+def build_medication_frequency_chart(records: List[DiaryRecord], top_n: int = 10, include_only_taken: bool = True) -> Dict[str, Any]:
     """統計藥物出現頻率。
 
     預設會包含所有藥物（`include_only_taken=False`）。
     若 `include_only_taken=True`，則僅計入 `taken==True` 的藥物（排除未標記為 taken 的）。
     """
     counter = Counter()
-    name_map = {}
     
     for record in records:
         for med in record["medications"]:
@@ -100,12 +94,11 @@ def build_medication_frequency_chart(records: List[DiaryRecord], top_n: int = 10
             key = med["key"] or med["display"]
             if key:
                 counter[key] += 1
-                name_map[key] = med["display"]
 
     items = counter.most_common(top_n)
     return {
         "chart_type": "bar",
-        "labels": [name_map.get(k, k) for k, _ in items],
+        "labels": [k for k, _ in items],
         "series": [{
             "name": "medication_frequency",
             "label": "Medication Frequency",
@@ -113,7 +106,7 @@ def build_medication_frequency_chart(records: List[DiaryRecord], top_n: int = 10
             "data": [count for _, count in items],
             "y_axis": "count",
         }],
-        "ranking": [{"name": k, "display": name_map.get(k, k), "count": count} for k, count in items],
+        "ranking": [{"name": k, "display": k, "count": count} for k, count in items],
     }
 
 
@@ -131,7 +124,7 @@ def build_emotion_symptom_cooccurrence(records: List[DiaryRecord]) -> Dict[str, 
             key = sym["key"] or sym["display"]
             if key:
                 symptom_counter[key] += 1
-                cooccurrence[f"{emotion_label}__{key}"] += 1
+                cooccurrence[f"{emotion_label}__{key}"] += 1 # 情緒跟症狀組合
 
     return {
         "chart_type": "cooccurrence",
@@ -150,32 +143,34 @@ def build_emotion_symptom_cooccurrence(records: List[DiaryRecord]) -> Dict[str, 
 
 def build_symptom_timeline(records: List[DiaryRecord]) -> Dict[str, Any]:
     """症狀出現/消失事件流，甘特圖風格"""
-    sorted_records = _sort_records_by_date(records)
+    sorted_records = sorted(records, key=lambda r: r["date"])
     tracker = {}
 
     for record in sorted_records:
         date_str = record["date"]
-        curr_date = datetime.strptime(date_str, "%Y-%m-%d")
+        curr_date = datetime.strptime(date_str, "%Y-%m-%d") # 將日期字串轉成 datetime 物件，方便計算日期差異
 
         for sym in record["symptoms"]:
             k = sym["key"] or sym["display"]
             status = sym["status"]
+            if status != "affirmed" and status != "negated": # 目前只追蹤 affirmed 和 negated 的狀態變化，其他狀態（hypothetical、historical、other_person、uncertain）暫不處理
+                continue
 
-            if k not in tracker:
+            if k not in tracker: # 如果這個症狀還沒有在 tracker 中，直接新增一個新的追蹤項目
                 tracker[k] = {
-                    "display": sym["display"],
+                    "display": k,
                     "current_span": {"start": date_str, "end": date_str, "status": status},
-                    "spans": []
+                    "spans": [] # 用來存放已完成的 span
                 }
             else:
-                last_end_str = tracker[k]["current_span"]["end"]
-                last_end_date = datetime.strptime(last_end_str, "%Y-%m-%d")
+                last_end_str = tracker[k]["current_span"]["end"] # 取得目前追蹤的最後日期
+                last_end_date = datetime.strptime(last_end_str, "%Y-%m-%d") 
                 last_status = tracker[k]["current_span"]["status"]
 
-                if (curr_date - last_end_date).days == 1 and last_status == status:
-                    tracker[k]["current_span"]["end"] = date_str
+                if (curr_date - last_end_date).days == 1 and last_status == status: # 如果日期是連續的且狀態相同，則延續目前的 span
+                    tracker[k]["current_span"]["end"] = date_str # 更新結束日期
                 else:
-                    tracker[k]["spans"].append(tracker[k]["current_span"])
+                    tracker[k]["spans"].append(tracker[k]["current_span"]) # 否則將目前的 span 存到 spans 列表中，並開始一個新的 span
                     tracker[k]["current_span"] = {"start": date_str, "end": date_str, "status": status}
 
     symptoms_out = []
@@ -193,26 +188,24 @@ def build_symptom_timeline(records: List[DiaryRecord]) -> Dict[str, Any]:
 
 def build_symptom_severity_chart(records: List[DiaryRecord]) -> Dict[str, Any]:
     """症狀嚴重程度趨勢，多線折線圖（過濾掉全為 1 的症狀）"""
-    sorted_records = _sort_records_by_date(records)
+    sorted_records = sorted(records, key=lambda r: r["date"])
     labels = [r["date"] for r in sorted_records]
 
     severity_map = defaultdict(lambda: [None] * len(sorted_records))
-    display_map = {}
     valid_keys = set()
 
     for i, record in enumerate(sorted_records):
         for sym in record["symptoms"]:
             k = sym["key"] or sym["display"]
-            display_map[k] = sym["display"]
             severity_map[k][i] = sym["severity"]
             if sym["severity"] > 0:
                 valid_keys.add(k)
 
-    series = []
+    series = [] # 每個症狀一條線，包含 name（key）、display（顯示名稱）和 data（每一天的 severity 值）
     for k in valid_keys:
         series.append({
             "name": k,
-            "display": display_map[k],
+            "display": k,
             "data": severity_map[k]
         })
 
@@ -225,7 +218,7 @@ def build_symptom_severity_chart(records: List[DiaryRecord]) -> Dict[str, Any]:
 
 def build_medication_timeline(records: List[DiaryRecord]) -> Dict[str, Any]:
     """用藥時間軸，區分明確記錄與推斷延續"""
-    sorted_records = _sort_records_by_date(records)
+    sorted_records = sorted(records, key=lambda r: r["date"])
     tracker = {}
 
     for record in sorted_records:
@@ -238,7 +231,7 @@ def build_medication_timeline(records: List[DiaryRecord]) -> Dict[str, Any]:
 
             if k not in tracker:
                 tracker[k] = {
-                    "display": med["display"],
+                    "display": k,
                     "current_span": {"start": date_str, "end": date_str, "taken": taken},
                     "spans": []
                 }
