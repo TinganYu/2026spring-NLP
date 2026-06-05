@@ -55,26 +55,25 @@ def _build_messages(trend_json: Dict[str, Any], instruction: str = None) -> List
 
 
 def summarize_health_trend(
-    trend_json: Dict[str, Any],
+    trend_json: Dict[str, Any], # aggregator.py 裡面的所有資料
     instruction: str = None,
-    model: Optional[str] = None,
 ) -> str:
     """Use Groq to turn structured health data into a natural-language summary."""
     if not _GROQ_API_KEY:
         raise RuntimeError("Groq API Key 未設定，請檢查 config.ini 或環境變數。")
 
     payload = {
-        "model": model or _GROQ_MODEL,
+        "model": _GROQ_MODEL,
         "messages": _build_messages(trend_json, instruction=instruction),
-        "temperature": 0.3,
+        "temperature": 0.3, 
     }
 
-    headers = {
+    headers = { # Groq API 的認證和內容類型設定
         "Authorization": f"Bearer {_GROQ_API_KEY}",
         "Content-Type": "application/json",
     }
 
-    response = requests.post(
+    response = requests.post( # 呼叫 Groq 的 chat/completions API
         f"{_GROQ_BASE_URL.rstrip('/')}/chat/completions",
         headers=headers,
         json=payload,
@@ -87,7 +86,7 @@ def summarize_health_trend(
         raise RuntimeError(f"Groq summarize failed: {exc} | details: {details}") from exc
 
     result = response.json()
-    choices = result.get("choices", [])
+    choices = result.get("choices", []) # Groq 的回應格式通常會在 'choices' 欄位裡面
     summary = ""
     if choices:
         summary = choices[0].get("message", {}).get("content", "") or ""
@@ -99,22 +98,7 @@ def summarize_health_trend(
 
 
 
-def build_weekly_groq_payload(weekly_payload: Dict[str, Any]) -> Dict[str, Any]:
-    """將週報聚合結果整理成 Groq 的輸入 payload，避免把完整 dashboard 直接塞進 prompt。"""
-    return {
-        "week_start": weekly_payload.get("week_start"),
-        "week_end": weekly_payload.get("week_end"),
-        "record_count": weekly_payload.get("record_count", 0),
-        "emotion_statistics": weekly_payload.get("emotion_statistics", {}),
-        "emotion_line_chart": weekly_payload.get("emotion_line_chart", {}),
-        "symptom_frequency_chart": weekly_payload.get("symptom_frequency_chart", {}),
-        "medication_frequency_chart": weekly_payload.get("medication_frequency_chart", {}),
-        "cooccurrence_chart": weekly_payload.get("cooccurrence_chart", {}),
-        "symptom_timeline": weekly_payload.get("symptom_timeline", {}),
-        "medication_timeline": weekly_payload.get("medication_timeline", {}),
-        "emotion_heatmap_calendar": weekly_payload.get("emotion_heatmap_calendar", {}),
-        "cooccurrence_heatmap": weekly_payload.get("cooccurrence_heatmap", {}),
-    }
+
 
 
 if __name__ == "__main__":

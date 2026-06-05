@@ -26,6 +26,10 @@ class HealthEntityItem(TypedDict, total=False):
     assertion: Optional[dict]
 
 class HealthRelationItem(TypedDict, total=False):
+    """relation_type" 是兩者關係的類型，"roles" 是一個列表，裡面包含了這個關係的各個角色和對應的實體文字，例如 [{"name": "treatment", "entity_text": "布洛芬"},"""
+    # Relation of type: DosageOfMedication has the following roles
+    #  ...Role 'Dosage' with entity '2 puff' normalized as 'None'
+    #  ...Role 'Medication' with entity 'ibuprofen' normalized as 'ibuprofen'
     relation_type: Optional[str]
     roles: List[dict]
 
@@ -98,16 +102,11 @@ def analyze_healthcare_entities(
     把文本翻譯成英文後丟給 Azure 醫療分析，回傳結構化的實體和關係資料。
     參數
     ----------
-    text:
-        輸入文本，可以是任何 Azure 支援的語言，但會先被翻譯成英文再送分析。
-    target_language:
-        翻譯的目標語言，預設為 "en"。Azure 醫療分析通常需要英文輸入。
-    source_language:
-        可選的來源語言，用於翻譯。如果不提供，系統會嘗試自動偵測。
-    translated_text:
-        如果上游已經翻譯過文本，可以直接傳入這個參數，避免在這裡重複翻譯一次。
-    include_translation:
-        如果沒有提供且 include_translation 為 True，則會在這裡進行翻譯。 (如果本來就是英文這邊就false)
+    text: 輸入文本。
+    target_language: 翻譯的目標語言，預設為 "en"。Azure 醫療分析通常需要英文輸入。
+    source_language: 可選的來源語言，用於翻譯。如果不提供，系統會嘗試自動偵測。
+    translated_text: 如果上游已經翻譯過文本，可以直接傳入這個參數，避免在這裡重複翻譯一次。
+    include_translation: 如果沒有提供且 include_translation 為 True，則會在這裡進行翻譯。 (如果本來就是英文這邊就false)
     """
     if not text:
         # 空字串直接回傳空結果，避免多打 API
@@ -158,6 +157,7 @@ def analyze_healthcare_entities(
 
     doc = docs[0]
     
+    # 轉換成我們定義的字典格式而已
     entities = [_to_entity_item(entity) for entity in (getattr(doc, "entities", []) or [])]
     relations = [_to_relation_item(relation) for relation in (getattr(doc, "entity_relations", []) or [])]
 

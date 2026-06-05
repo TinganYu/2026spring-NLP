@@ -14,7 +14,7 @@ import website.database as db
 from diary.processor import process_entry
 from diary.analysis import to_diary_record
 from diary.aggregator import aggregate_weekly_records 
-from diary.groq import summarize_health_trend, build_weekly_groq_payload
+from diary.groq import summarize_health_trend
 
 from medical.service_phi import call_phi_service
 from medical.service_speech import speech_to_text
@@ -34,11 +34,6 @@ app = Flask(__name__)
 app.json.sort_keys = False
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
-# @app.route("/api/entity-mapping/<entity_id>", methods=["GET"]) # 之後如果有做需要entity標籤的東西才會需要，請無視
-# def get_entity_mapping(entity_id):
-#     # 從數據庫取得完整的entity數據(尤其是data sources)
-#     # 之後建好再加入程式
-#     pass
 
 @app.route("/api/weekly_dashboard", methods=["GET"])
 def get_weekly_dashboard():
@@ -53,11 +48,8 @@ def get_weekly_dashboard():
     
     # 直接聚合生成圖表
     dashboard_payload = aggregate_weekly_records(diary_records)
-    #groq_payload = build_weekly_groq_payload(dashboard_payload)
-    #ai_summary = summarize_health_trend(groq_payload)
-    ai_summary = ""
-    
-    del dashboard_payload['symptom_severity_chart'], dashboard_payload['symptom_timeline'], dashboard_payload['medication_timeline'], dashboard_payload['emotion_heatmap_calendar'], dashboard_payload['cooccurrence_heatmap']
+    groq_payload = build_weekly_groq_payload(dashboard_payload)
+    ai_summary = summarize_health_trend(groq_payload)
 
     print("[GET] Weekly Dashboard Summary:")
     print(ai_summary)

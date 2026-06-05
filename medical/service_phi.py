@@ -50,7 +50,7 @@ class MedicationData:
 
 def call_phi_service(text: str) -> dict:
     # 取得phi的分析結果
-    phi_response = analyze_healthcare_entities(text)
+    phi_response = analyze_healthcare_entities(text, include_translation=False) # 這裡不需要翻譯，直接丟原文(英文)給它分析就好
 
     '''
     # 印出關係資訊
