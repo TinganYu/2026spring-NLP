@@ -87,6 +87,16 @@ def translate_text(
 
 
 
+# ============= Convenience function for common use case =============
+# 只回傳第一個翻譯結果的文本，適合大多數只需要單一翻譯的情況。
+def translate_to(text: str, target_language: str, source_language: Optional[str] = None) -> str:
+    """Translate text and return the first translated string for the requested target language."""
+    result = translate_text(text, target_language=target_language, source_language=source_language)
+    # result is now a dict
+    if not result.get("translations"):
+        return text
+    return result["translations"][0]["text"]
+
 
 
 if __name__ == "__main__":
