@@ -131,7 +131,7 @@ def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
                 display=text,
                 dosages=data["dosages"],
                 frequencies=data["frequencies"],
-                taken=(med_status == "affirmed") and bool(ent.get("assertion"))
+                taken=(med_status == "affirmed")
             ))
     
 
