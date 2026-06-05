@@ -34,29 +34,54 @@ app = Flask(__name__)
 app.json.sort_keys = False
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
-
-@app.route("/api/weekly_dashboard", methods=["GET"])
-def get_weekly_dashboard():
-    #user_id = request.args.get("user_id")
-    #start_date = request.args.get("start_date") 
-    #end_date = request.args.get("end_date")
+# 獲取過去一個月的日記資料，並回傳聚合後的圖表資料和 AI 分析摘要
+@app.route("/api/monthly_dashboard", methods=["GET"])
+def get_monthly_dashboard():
+    print("[GET] Monthly Dashboard GET, received data:", request.form)
+    
+    # 從 DB 取出一個月內的日記（DiaryRecord 格式）
     start_date = str(datetime.now().date() - relativedelta(months=1))
     end_date = str(datetime.now().date())
-    
-    # 從 DB 取出時間範圍內的日記（DiaryRecord 格式）
     diary_records = DBdata_to_diary_records(db.date_period_select(start_date, end_date))
     
     # 直接聚合生成圖表
     dashboard_payload = aggregate_weekly_records(diary_records)
-    ai_summary = summarize_health_trend(dashboard_payload)
+    ai_summary = summarize_health_trend(dashboard_payload).replace("\n", "<br>")  # 將換行轉成 HTML 的 <br>，方便前端顯示
 
-    print("[GET] Weekly Dashboard Summary:")
+    print("[GET] Monthly Dashboard Summary:")
     print(ai_summary)
-
+    
+    dashboard_payload["cooccurrence_chart"] = coocurrence_to_chart(dashboard_payload["cooccurrence_chart"]["pair_summary"])
     return jsonify({
         "weekly_dashboard": dashboard_payload,
         "groq_summary": ai_summary,
     })
+
+# 將 coocurrence 的格式轉換成適合 chart.js 的格式
+def coocurrence_to_chart(data):
+    symptoms, positive_counts, negative_counts = [], [], []
+    
+    for i in data:
+        if i["symptom"] not in symptoms:
+            symptoms.append(i["symptom"])
+            if i["emotion"] == "positive":
+                positive_counts.append(i["count"])
+                negative_counts.append(0)
+            else:
+                positive_counts.append(0)
+                negative_counts.append(-1*i["count"])
+        else:
+            index = symptoms.index(i["symptom"])
+            if i["emotion"] == "positive":
+                positive_counts[index] = i["count"]
+            else:
+                negative_counts[index] = -1 * i["count"]
+                
+    return {
+        "labels": symptoms,
+        "positive_counts": positive_counts,
+        "negative_counts": negative_counts
+    }
 
 # 接收前端送來的日記內容，並回傳分析結果
 @app.route("/diary_process", methods=["POST"])

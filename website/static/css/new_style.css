@@ -36,8 +36,18 @@ h4 {
 }
 
 canvas {
-    width: 100% !important;
-    height: 100% !important;
+    width: 100%;
+    height: 100%;
+}
+
+#graph-main-row p{
+    font-size: 24px;
+    font-weight: bold;
+}
+
+#graph-main-row span{
+    font-size: 16px;
+    color: #64748B;
 }
 
 /* 表格樣式(醫囑結果呈現) */
@@ -250,6 +260,7 @@ table td:nth-child(3){
 
     color: #94A3B8;
     font-size: 20px;
+    margin-left: auto;
 }
 
 .history-block {
@@ -273,6 +284,15 @@ table td:nth-child(3){
 }
 
 /* 日記結果顯示 */
+.medication p{
+    margin: 2px 0;
+}
+
+#symptom p{
+    margin: 2px 0;
+    color: #64748B;
+}
+
 .score-bar {
     height: 5px;
     background: #bdbdb5;
@@ -287,6 +307,13 @@ table td:nth-child(3){
     border-radius: 50%;
     display: inline-block;
     margin: 6px;
+}
+
+.emotion-label {
+    font-size: 24px;
+    font-weight: bold;
+    margin: auto 0;
+    color: rgb(62, 62, 62);
 }
 
 .label {
@@ -349,11 +376,11 @@ table td:nth-child(3){
 }
 .症狀 {
     background:#FFE1E3;
-    color: #E63946;
+    color: #E63946 !important;
 }
 .藥名 {
     background:#E6F4EA;
-    color: #2E7D32;
+    color: #2E7D32 !important;
 }
 .劑量 {
     background: #E6F0FF;
@@ -365,7 +392,7 @@ table td:nth-child(3){
 }
 .註記 {
     background: #F1F3F5;
-    color: #495057;
+    color: #495057 !important;
 }
 
 /* 其他 */
@@ -387,8 +414,9 @@ table td:nth-child(3){
     resize: none;
 }
 
+/* 健康趨勢 */
 #ai-summary {
-    background-color: #b8fee3; 
+    background-color: #d1faea; 
     color: #2a7c61; 
     padding: 20px; 
     border-radius: 15px;
@@ -396,8 +424,10 @@ table td:nth-child(3){
 }
 
 .chart-container {
-    width: 90%; 
+    width: 100%; 
     height: 33vw;
+    margin: 20px auto 0;
+
 }
 
 .dash {

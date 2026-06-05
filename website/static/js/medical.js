@@ -109,8 +109,6 @@ function resultShow(data){
                     <th>翻譯結果（${$(".language-btn.select").text()}）</th>
                 </tr>`;
         
-        // 要對按鈕做url綁定
-        
         for(const key of ["劑量", "頻率", "註記"]){
             if(medicine[key].original.length > 0){
                 if(!showBool)
