@@ -1,5 +1,4 @@
 """將已整理好的分析資料轉成前端圖表 payload（labels/series/markers/ranking）。
-
 此模組只負責格式化與統計的視覺化輸出，不直接執行 NLP/PHI 分析。
 
 相較值得保留的：emotion_line_chart（情緒趨勢折線）、symptom_frequency_chart（症狀頻率長條）、medication_frequency_chart（用藥頻率長條）、cooccurrence_chart(情緒-症狀共現分析)。
@@ -29,17 +28,16 @@ def build_emotion_line_chart(records: List[DiaryRecord]) -> Dict[str, Any]:
         polarity = -score if label == "negative" else score if label == "positive" else 0.0
         values.append(polarity)
 
-        markers.append({ # 使用者點及某個點時，可以看到這些資訊
-            "date": date_text,
-            "emotion_label": record["emotion_label"],
-            "emotion_score": record["emotion_score"],
-            "emotion_polarity": polarity,
-            "symptoms": [s["display"] for s in record["symptoms"]],
-            "medications": [m["display"] for m in record["medications"]],
-        })
+        # markers.append({ # 使用者點及某個點時，可以看到這些資訊
+        #     "date": date_text,
+        #     "emotion_label": record["emotion_label"],
+        #     "emotion_score": record["emotion_score"],
+        #     "emotion_polarity": polarity,
+        #     "symptoms": [s["display"] for s in record["symptoms"]],
+        #     "medications": [m["display"] for m in record["medications"]],
+        # })
 
     return {
-        "chart_type": "line",
         "labels": labels, # x 軸
         "series": [{ # series 是為了支援多條線的格式，這裡我們只有一條線，命名為 emotion_polarity
             "name": "emotion_polarity",
@@ -48,7 +46,7 @@ def build_emotion_line_chart(records: List[DiaryRecord]) -> Dict[str, Any]:
             "data": values,
             "y_axis": "emotion",
         }],
-        "markers": markers,
+        # "markers": markers,
     }
 
 
@@ -64,7 +62,6 @@ def build_symptom_frequency_chart(records: List[DiaryRecord], top_n: int = 10) -
 
     items = counter.most_common(top_n) # (symptom_key, count) 的列表，依頻率排序，取前 top_n
     return {
-        "chart_type": "bar",
         "labels": [k for k, _ in items], # x 軸標籤，症狀名稱
         "series": [{
             "name": "symptom_frequency",
@@ -73,7 +70,6 @@ def build_symptom_frequency_chart(records: List[DiaryRecord], top_n: int = 10) -
             "data": [count for _, count in items],
             "y_axis": "count",
         }],
-        "ranking": [{"name": k, "display": k, "count": count} for k, count in items], # 顯示用的排名列表，包含 key、display 名稱和計數，方便前端顯示
     }
 
 
@@ -96,7 +92,6 @@ def build_medication_frequency_chart(records: List[DiaryRecord], top_n: int = 10
 
     items = counter.most_common(top_n)
     return {
-        "chart_type": "bar",
         "labels": [k for k, _ in items],
         "series": [{
             "name": "medication_frequency",
@@ -105,7 +100,6 @@ def build_medication_frequency_chart(records: List[DiaryRecord], top_n: int = 10
             "data": [count for _, count in items],
             "y_axis": "count",
         }],
-        "ranking": [{"name": k, "display": k, "count": count} for k, count in items],
     }
 
 
