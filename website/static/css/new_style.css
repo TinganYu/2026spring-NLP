@@ -35,6 +35,11 @@ h4 {
     margin: 0;
 }
 
+canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
 /* 表格樣式(醫囑結果呈現) */
 table {
     width: 100%;
@@ -380,4 +385,27 @@ table td:nth-child(3){
 
     width: 100%;
     resize: none;
+}
+
+#ai-summary {
+    background-color: #b8fee3; 
+    color: #2a7c61; 
+    padding: 20px; 
+    border-radius: 15px;
+    line-height: 1.5;
+}
+
+.chart-container {
+    width: 90%; 
+    height: 33vw;
+}
+
+.dash {
+    height: 32px;
+    width: 8px;
+    background: #0D9488;
+    border: none;
+    display: inline-block;
+    margin-right: 7px;
+    transform: translateY(9px);
 }

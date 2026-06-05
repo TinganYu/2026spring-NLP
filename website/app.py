@@ -5,6 +5,7 @@ sys.path.append(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
 import configparser
 from flask import Flask, request, abort, render_template, url_for, Blueprint, jsonify
@@ -41,17 +42,22 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 @app.route("/api/weekly_dashboard", methods=["GET"])
 def get_weekly_dashboard():
-    user_id = request.args.get("user_id")
-    start_date = request.args.get("start_date") 
-    end_date = request.args.get("end_date")
+    #user_id = request.args.get("user_id")
+    #start_date = request.args.get("start_date") 
+    #end_date = request.args.get("end_date")
+    start_date = str(datetime.now().date() - relativedelta(months=1))
+    end_date = str(datetime.now().date())
     
     # 從 DB 取出時間範圍內的日記（DiaryRecord 格式）
-    diary_records = db.get_diaries_by_range(user_id, start_date, end_date)
+    diary_records = DBdata_to_diary_records(db.date_period_select(start_date, end_date))
     
     # 直接聚合生成圖表
     dashboard_payload = aggregate_weekly_records(diary_records)
-    groq_payload = build_weekly_groq_payload(dashboard_payload)
-    ai_summary = summarize_health_trend(groq_payload)
+    #groq_payload = build_weekly_groq_payload(dashboard_payload)
+    #ai_summary = summarize_health_trend(groq_payload)
+    ai_summary = ""
+    
+    del dashboard_payload['symptom_severity_chart'], dashboard_payload['symptom_timeline'], dashboard_payload['medication_timeline'], dashboard_payload['emotion_heatmap_calendar'], dashboard_payload['cooccurrence_heatmap']
 
     print("[GET] Weekly Dashboard Summary:")
     print(ai_summary)
@@ -212,43 +218,38 @@ def db_select():
     result = list(result)
     return jsonify(result)
 
-#一打開網站要做的事情
+# 一打開網站要做的事情
 @app.route("/")
 def home():
     print("[GET] Home GET")
     return render_template("diary.html")
 
-#前往情緒日記頁面
+# 前往情緒日記頁面
 @app.route("/diary")
 def diary():
     return render_template("diary.html")
 
-#前往醫囑頁面
+# 前往醫囑頁面
 @app.route("/medical")
 def medical():
     return render_template("medical.html")
 
-#前往圖表頁面
+# 前往圖表頁面
 @app.route("/graph")
 def graph():
     return render_template("graph.html")
 
+# 將 DB 中取出的資料轉為 diary records
+def DBdata_to_diary_records(DBdata):
+    DBdata = list(DBdata)
+    for d in DBdata:
+        for symptom in d["symptoms"]:
+            symptom["display"] = symptom["key"]
+        for medication in d["medications"]:
+            medication["key"] = medication["key"][1]
+            medication["display"] = medication["key"]
+    return DBdata
+
 if __name__ == "__main__":
     db.connect()
-    # 測試用
-    '''start_date = "2025-01-01"
-    end_date = "2027-01-01"
-    
-    # 從 DB 取出時間範圍內的日記（AnalysisResult 格式）
-    analysis_records = db.date_period_select(start_date, end_date)
-    
-    # 直接聚合生成圖表
-    dashboard_payload = aggregate_weekly_records(analysis_records)
-    groq_payload = build_weekly_groq_payload(dashboard_payload)
-    ai_summary = summarize_health_trend(groq_payload)
-    print(dashboard_payload)
-
-    print("[GET] Weekly Dashboard Summary:")
-    print(ai_summary)'''
-    
     app.run()
