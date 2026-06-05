@@ -77,7 +77,7 @@ def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
         rtype = rel.get("relation_type") # QualifierOfCondition
         
         # 處理 Symptoms 關係
-        cond_text = _get_role_text(roles, "Condition", "Symptom", "Entity")  # 找出關係中是這種類型的entity
+        cond_text = _get_role_text(roles, "Condition", "Symptom")  # 找出關係中是這種類型的entity
         if cond_text:
             target = symptom_idx[cond_text] # 索引標籤
             if rtype == "QualifierOfCondition":
@@ -95,7 +95,7 @@ def to_diary_record(result: AnalysisResult, date: str) -> DiaryRecord:
                 if val: target["frequencies"].append(val)
 
         # 處理 Medications 關係
-        med_text = _get_role_text(roles, "Medication", "Drug") # 找出關係中是這種類型的entity
+        med_text = _get_role_text(roles, "Medication") # 找出關係中是這種類型的entity
         if med_text:
             target = med_idx[med_text]
             if rtype == "DosageOfMedication":

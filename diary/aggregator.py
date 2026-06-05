@@ -27,11 +27,6 @@ def aggregate_weekly_records(records: List[DiaryRecord]) -> Dict[str, Any]:
             "symptom_frequency_chart": {},
             "medication_frequency_chart": {},
             "cooccurrence_chart": {},
-            "symptom_timeline": {},
-            "symptom_severity_chart": {},
-            "medication_timeline": {},
-            "emotion_heatmap_calendar": {},
-            "cooccurrence_heatmap": {},
         }
 
     diary_records = sorted(records, key=lambda x: x["date"]) # 確保資料是按照日期排序
