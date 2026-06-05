@@ -48,8 +48,7 @@ def get_weekly_dashboard():
     
     # 直接聚合生成圖表
     dashboard_payload = aggregate_weekly_records(diary_records)
-    groq_payload = build_weekly_groq_payload(dashboard_payload)
-    ai_summary = summarize_health_trend(groq_payload)
+    ai_summary = summarize_health_trend(dashboard_payload)
 
     print("[GET] Weekly Dashboard Summary:")
     print(ai_summary)
