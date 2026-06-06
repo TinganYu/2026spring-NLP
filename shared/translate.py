@@ -87,23 +87,12 @@ def translate_text(
 
 
 # ============= Convenience function for common use case =============
-# 只回傳第一個翻譯結果的文本，適合大多數只需要單一翻譯的情況。
-def translate_to(text: str, target_language: str, source_language: Optional[str] = None) -> str:
-    """Translate text and return the first translated string for the requested target language."""
-    result = translate_text(text, target_language=target_language, source_language=source_language)
-    # result is now a dict
-    if not result.get("translations"):
-        return text
-    return result["translations"][0]["text"]
-
-#直接給一個list翻譯
 def translate_list(
     texts: List[str], 
     target_language: str, 
     source_language: Optional[str] = None
 ) -> List[str]:
-    """Translate a list of strings simultaneously. 
-    Returns a clean, flat list of translated text strings.
+    """直接同時翻譯多個文本，回傳翻譯後的字符串列表。
     """
     if not texts:
         return []
@@ -124,7 +113,13 @@ def translate_list(
 
     return [item.translations[0].text for item in response]
 
-
+def translate_to(text: str, target_language: str, source_language: Optional[str] = None) -> str:
+    """只回傳第一個翻譯結果的文本，適合大多數只需要單一str翻譯的情況。"""
+    if not text:
+        return text
+    results = translate_list([text], target_language=target_language, source_language=source_language)
+    
+    return results[0] if results else text
 
 
 
