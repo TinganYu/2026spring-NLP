@@ -61,7 +61,3 @@ def medical_find(select_dict = None):
 # 回傳 start date ~ end date 的所有 diary data
 def date_period_select(start, end):
     return diary_find({"date": {"$gte": start, "$lte": end}})
-
-'''if __name__ == "__main__": 測試用
-    connect()
-    print(list(diary_find({"date": {"$gte": "2025-01-01", "$lte": "2027-01-01"}})))'''
