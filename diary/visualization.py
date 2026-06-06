@@ -57,7 +57,7 @@ def build_symptom_frequency_chart(records: List[DiaryRecord], top_n: int = 10) -
     for record in records:
         for sym in record["symptoms"]:
             key = sym["key"] or sym["display"] # 優先使用key，如果沒有就使用display名稱
-            if key:
+            if key and sym.get("status") != "negated": # 只計數非否定的症狀
                 counter[key] += 1
 
     items = counter.most_common(top_n) # (symptom_key, count) 的列表，依頻率排序，取前 top_n

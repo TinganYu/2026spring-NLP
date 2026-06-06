@@ -21,7 +21,7 @@ from medical.service_speech import speech_to_text
 from medical.wiki_utils import get_wiki_info
 
 from shared.pii import review_pii
-from shared.translate import translate_to
+from shared.translate import translate_to, translate_list
 
 
 # Config Parser
@@ -101,7 +101,7 @@ def process_diary():
         diary_record_view["symptoms"] = [
             symptom 
             for symptom in diary_record_view["symptoms"] 
-            if symptom["status"] != "negated" and symptom["status"] != "other_person"]
+            if symptom["status"] != "other_person"]
         
         # 翻譯資料以供顯示
         target = "zh-Hant"
@@ -112,13 +112,16 @@ def process_diary():
             del symptom["display"]
             
             symptom["key"] = translate_to(symptom["key"], target)
-            
+
             # 翻譯所有時間跟頻率，只保留翻譯結果
-            for i in range(len(symptom['times'])):
-                symptom['times'][i] = translate_to(symptom['times'][i], target)
+            symptom['times'] = translate_list(symptom['times'], target_language=target)
+            symptom['frequencies'] = translate_list(symptom['frequencies'], target_language=target)
+
+            # for i in range(len(symptom['times'])):
+            #     symptom['times'][i] = translate_to(symptom['times'][i], target)
                 
-            for i in range(len(symptom['frequencies'])):
-                symptom['frequencies'][i] = translate_to(symptom['frequencies'][i], target)
+            # for i in range(len(symptom['frequencies'])):
+            #     symptom['frequencies'][i] = translate_to(symptom['frequencies'][i], target)
         
         for medication in diary_record_view["medications"]: # 翻譯用藥
             # 如果沒有 key 就顯示 display，保留原文跟翻譯結果
@@ -131,11 +134,14 @@ def process_diary():
             medication["key"].append(translate_to(medication["key"][0], target))
             
             # 翻譯所有時間跟頻率，只保留翻譯結果
-            for i in range(len(medication['dosages'])):
-                medication['dosages'][i] = translate_to(medication['dosages'][i], target)
+            medication['dosages'] = translate_list(medication['dosages'], target_language=target)
+            medication['frequencies'] = translate_list(medication['frequencies'], target_language=target)
+            
+            # for i in range(len(medication['dosages'])):
+            #     medication['dosages'][i] = translate_to(medication['dosages'][i], target)
                 
-            for i in range(len(medication['frequencies'])):
-                medication['frequencies'][i] = translate_to(medication['frequencies'][i], target)
+            # for i in range(len(medication['frequencies'])):
+            #     medication['frequencies'][i] = translate_to(medication['frequencies'][i], target)
         
         # 存 diary data 到 DB
         db.diary_insert(text, diary_record_view)

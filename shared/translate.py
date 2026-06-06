@@ -39,7 +39,7 @@ def _get_client() -> TextTranslationClient:
 
 def translate_text(
     text: str,
-    target_language: Union[str, Sequence[str]],
+    target_language: Union[str, Sequence[str]], # sequence 是 list 或 tuple，允許多個目標語言
     source_language: Optional[str] = None,
 ) -> TranslationResult:
     """Translate text with Azure Translator.
@@ -76,7 +76,6 @@ def translate_text(
 
     first_item = response[0] # Azure Translator API 的回應是一個列表，每個元素對應一個輸入文本。因為我們一次只翻譯一段文本，所以取第一個元素即可。
     detected_language = getattr(getattr(first_item, "detected_language", None), "language", None)
-    
     translation_list: List[TranslationItem] = [ {"text": translation.text, "to": translation.to} for translation in first_item.translations]
     
     return {
@@ -97,15 +96,50 @@ def translate_to(text: str, target_language: str, source_language: Optional[str]
         return text
     return result["translations"][0]["text"]
 
+#直接給一個list翻譯
+def translate_list(
+    texts: List[str], 
+    target_language: str, 
+    source_language: Optional[str] = None
+) -> List[str]:
+    """Translate a list of strings simultaneously. 
+    Returns a clean, flat list of translated text strings.
+    """
+    if not texts:
+        return []
+        
+    client = _get_client()
+    
+    try:
+        response = client.translate(
+            body=texts,
+            to_language=[target_language],
+            from_language=source_language,
+        )
+    except HttpResponseError as exc:
+        raise RuntimeError(f"Azure 批次翻譯失敗: {exc}") from exc
+        
+    if not response:
+        return texts
+
+    return [item.translations[0].text for item in response]
 
 
+
+
+
+
+import datetime
 if __name__ == "__main__":
-    sample_text = input("請輸入要翻譯的句子: ")
-    target_language = input("請輸入目標語言（例如 en、zh-Hant、vi、id）: ").strip() or "en"
-    result = translate_text(sample_text, target_language=target_language)
+    time = datetime.datetime.now()
+    sample_text = ["Hello, world!", "How are you?"]#input("請輸入要翻譯的句子: ")
+    target_language ="en" #input("請輸入目標語言（例如 en、zh-Hant、vi、id）: ").strip() or "en"
+    # result = translate_list(sample_text, target_language=target_language)
+    result = [translate_to(k, target_language=target_language) for k in sample_text]
+    endtime = datetime.datetime.now()
+    print("總時間：", endtime - time)
 
-    # result is now a dict
-    print("原文：", result["source_text"])
-    print("偵測語言：", result["detected_language"])
-    for item in result["translations"]:
-        print(f"翻譯 ({item['to']})：{item['text']}")
+    # result is now a list of strings
+    print("原文：", sample_text)
+    print("翻譯：", result[0])
+    print(f"翻譯 ({target_language})：{result[0]}")

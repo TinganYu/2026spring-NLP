@@ -101,8 +101,8 @@ function resultShow(data) {
                 htmlContent += `<span class="label">正在發生</span><br>`;
             else if (symptom.status == "hypothetical")
                 htmlContent += `<span class="label">可能發生</span><br>`;
-            else if (symptom.status == "historical")
-                htmlContent += `<span class="label">已消失</span>`;
+            else if (symptom.status == "negated")
+                htmlContent += `<span class="label">已消失/未發生</span>`;
             htmlContent += `</div>`;
 
             // 顯示發生時間與發生頻率
