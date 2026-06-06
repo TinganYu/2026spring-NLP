@@ -48,6 +48,7 @@ def review_pii(text: str, language: Optional[str] = None) -> PIIReview:
             "piiCategories": [
                 "Person",
                 "PhoneNumber",
+                "DateOfBirth",
                 "Email",
                 "Address",
                 "IPAddress",
@@ -117,8 +118,9 @@ def review_pii(text: str, language: Optional[str] = None) -> PIIReview:
 
 
 if __name__ == "__main__":
-    sample = "你好，我是陳大文，手機 0912-345-678，email: test@example.com。"
+    print("Testing PII review...")
+    sample = "Hello Ms. Sarah Jenkins, your date of birth is August 22, 1995, correct? Based on your symptoms, I've diagnosed you with Bronchial Asthma. For your treatment, you need to inhale Albuterol 90mcg, that's 2 puffs, every 4 to 6 hours as needed for wheezing."
     review = review_pii(sample)
-    print("needs_masking:", review.needs_masking)
-    print("entities:", [(e.text, e.category) for e in review.entities])
-    print("masked:", review.redacted_text)
+    print("needs_masking:", review["needs_masking"])
+    print("entities:", [(e["text"], e["category"]) for e in review["entities"]])
+    print("masked:", review["redacted_text"])
