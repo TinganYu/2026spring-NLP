@@ -34,14 +34,10 @@
 
 | 圖表函式 | chart_type | 內容說明 | 常見用途 |
 |---|---|---|---|
-| `build_emotion_line_chart` | `line` | 將每天的情緒分數轉成折線圖，負面情緒會顯示為負值、正面情緒會顯示為正值。`markers` 也會附上當日症狀與用藥。 | 看整體情緒趨勢、標出波動日 |
+| `build_emotion_line_chart` | `line` | 將每天的情緒分數轉成折線圖，負面情緒會顯示為負值、正面情緒會顯示為正值。 | 看整體情緒趨勢、標出波動日 |
 | `build_symptom_frequency_chart` | `bar` | 統計症狀/徵象出現次數，依照 `key` 或 `display` 做排行。 | 找出最常出現的症狀 |
 | `build_medication_frequency_chart` | `bar` | 統計藥物提及次數，可選擇只算 `taken == True` 的藥物。 | 看常用藥物、觀察服藥頻率 |
 | `build_emotion_symptom_cooccurrence` | `cooccurrence` | 統計情緒與症狀的同日共現次數，輸出情緒摘要、症狀摘要與 pair summary。 | 找出「情緒 + 症狀」的常見組合 |
-| `build_symptom_timeline` | `timeline` | 將症狀依日期串成時間軸，連續日期且狀態相同會合併成同一段 span。 | 看症狀何時出現、持續多久、是否反覆 |
-| `build_medication_timeline` | `timeline` | 將用藥依日期串成時間軸，區分連續記錄與分段紀錄。 | 看藥物使用區間與持續性 |
-| `build_emotion_heatmap_calendar` | `calendar_heatmap` | 依日期生成週曆熱力圖，值由情緒極性換算而來。 | 快速看整段時間的情緒分布 |
-| `build_cooccurrence_heatmap` | `heatmap` | 以情緒為 y 軸、症狀為 x 軸，建立共現矩陣。 | 看哪種情緒最常和哪些症狀一起出現 |
 
 ### 回傳資料結構
 
@@ -51,10 +47,6 @@
 - `symptom_frequency_chart`
 - `medication_frequency_chart`
 - `cooccurrence_chart`
-- `symptom_timeline`
-- `medication_timeline`
-- `emotion_heatmap_calendar`
-- `cooccurrence_heatmap`
 
 前端可以直接把這些欄位丟給 Chart.js、ECharts 或其他圖表庫。
 
