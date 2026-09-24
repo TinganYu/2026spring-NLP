@@ -8,7 +8,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
 import configparser
-from flask import Flask, request, abort, render_template, url_for, Blueprint, jsonify
+from flask import Flask, request, abort, render_template, redirect, Blueprint, jsonify
 import website.database as db
 
 from diary.processor import process_entry
@@ -244,7 +244,7 @@ def db_select():
 @app.route("/")
 def home():
     print("[GET] Home GET")
-    return render_template("diary.html")
+    return redirect('/medical')
 
 # 前往情緒日記頁面
 @app.route("/diary")
